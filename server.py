@@ -57,11 +57,7 @@ import numpy as np
 from PIL import Image, ImageOps, ImageChops
 
 # Initialize FastMCP Server
-mcp = FastMCP(
-    name="StegoKiller",
-    description="StegoKiller MCP Server by Knight_S - Ultimate Steganography & Digital Forensics Suite (44+ Tools)",
-    dependencies=["numpy", "pillow", "scipy", "matplotlib", "scapy"]
-)
+mcp = FastMCP("StegoKiller")
 
 # Global Configuration
 OUTPUT_BASE_DIR = Path("/tmp/stego_mcp_output")
