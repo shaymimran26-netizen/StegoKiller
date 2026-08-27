@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StegoKiller MCP Server | Ultra Steganography & Forensics Suite</title>
+  <meta name="description" content="Production-grade FastMCP server with 44+ steganography, digital forensics, and covert-channel extraction tools.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: #0f172a;
+      --bg-card-hover: #1e293b;
+      --border: #334155;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-purple: #a855f7;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Fira Code', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Cyber Glow Background */
+    .glow-bg {
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(168, 85, 247, 0.08) 50%, rgba(9, 13, 22, 0) 80%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header & Nav */
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 13, 22, 0.85);
+    }
+    .nav-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--accent-cyan);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo span {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--accent-cyan); }
+    .btn-github {
+      background: #1e293b;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-github:hover {
+      background: #334155;
+      border-color: var(--accent-cyan);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+    .badge-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      color: var(--accent-cyan);
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 780px;
+      margin: 0 auto 36px;
+    }
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    .badges-row img { height: 26px; }
+
+    /* Install & Config Tabs */
+    .quick-start {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 900px;
+      margin: 0 auto 80px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+    .tab-header {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .code-block {
+      background: #060911;
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      overflow-x: auto;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: var(--accent-cyan);
+      color: #000;
+    }
+
+    /* Tools Matrix Section */
+    .section-title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .section-subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+    }
+    .search-box {
+      max-width: 600px;
+      margin: 0 auto 40px;
+      position: relative;
+    }
+    .search-box input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-box input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+    }
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 20px;
+      margin-bottom: 80px;
+    }
+    .tool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+    .tool-card:hover {
+      transform: translateY(-3px);
+      background: var(--bg-card-hover);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.15);
+    }
+    .tool-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .tool-name {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--accent-cyan);
+    }
+    .tool-category {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .cat-triage { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .cat-image { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .cat-audio { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+    .cat-text { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
+    .cat-network { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+    .cat-ai { background: rgba(234, 179, 8, 0.15); color: #facc15; }
+
+    .tool-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    footer a { color: var(--accent-cyan); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <div class="glow-bg"></div>
+
+  <header>
+    <div class="container nav-wrap">
+      <a href="#" class="logo">
+        <span>⚡ StegoKiller</span> MCP
+      </a>
+      <div class="nav-links">
+        <a href="#quickstart">Installation</a>
+        <a href="#tools">44 Tools Matrix</a>
+        <a href="#remote">Cloud & Remote</a>
+        <a href="https://github.com/shaymimran26-netizen/StegoKiller" target="_blank" class="btn-github">
+          <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="badge-tag">⚡ FastMCP Steganography Engine • Created by Knight_S</div>
+      <h1>Ultra-Enriched <span class="gradient-text">Steganography & Forensics</span> MCP Suite</h1>
+      <p>Seamlessly arm Claude, Cursor, and AI agents with 44+ automated forensic tools across Images, Audio, Video, PCAP Covert Channels, Polyglots, and Text payloads.</p>
+      
+      <div class="badges-row">
+        <img src="https://img.shields.io/badge/Tools-44%20Specialized%20Engines-06b6d4?style=for-the-badge&logo=shield" alt="Tools">
+        <img src="https://img.shields.io/badge/FastMCP-2025%20Ready-10b981?style=for-the-badge" alt="FastMCP">
+        <img src="https://img.shields.io/badge/Docker-GHCR%20Published-a855f7?style=for-the-badge&logo=docker" alt="Docker">
+        <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge" alt="License">
+      </div>
+    </section>
+
+    <!-- Quickstart Config Tabs -->
+    <section id="quickstart" class="quick-start">
+      <div class="tab-header">
+        <button class="tab-btn active" onclick="openTab(event, 'tab-claude')">Claude Desktop</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab-smithery')">Smithery CLI</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab-docker')">Docker / GHCR</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab-pip')">Python PIP</button>
+      </div>
+
+      <div id="tab-claude" class="tab-content active">
+        <p style="color: var(--text-muted); margin-bottom: 12px;">Add this entry to your <code>claude_desktop_config.json</code>:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode('claude-cfg')">Copy</button>
+          <pre id="claude-cfg">{
+  "mcpServers": {
+    "stegokiller": {
+      "command": "python3",
+      "args": ["/path/to/StegoKiller/server.py"],
+      "env": { "PYTHONUNBUFFERED": "1" }
+    }
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div id="tab-smithery" class="tab-content">
+        <p style="color: var(--text-muted); margin-bottom: 12px;">Install directly in 1-click via Smithery CLI:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode('smithery-cmd')">Copy</button>
+          <pre id="smithery-cmd">npx -y @smithery/cli install stegokiller --client claude</pre>
+        </div>
+      </div>
+
+      <div id="tab-docker" class="tab-content">
+        <p style="color: var(--text-muted); margin-bottom: 12px;">Run the pre-built GHCR image without installing dependencies:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode('docker-cfg')">Copy</button>
+          <pre id="docker-cfg">{
+  "mcpServers": {
+    "stegokiller": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-v", "/tmp/stego_mcp_output:/tmp/stego_mcp_output",
+        "ghcr.io/shaymimran26-netizen/stegokiller:latest"
+      ]
+    }
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div id="tab-pip" class="tab-content">
+        <p style="color: var(--text-muted); margin-bottom: 12px;">Install via Git and run directly:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode('pip-cmd')">Copy</button>
+          <pre id="pip-cmd">git clone https://github.com/shaymimran26-netizen/StegoKiller.git
+cd StegoKiller && chmod +x setup.sh && ./setup.sh
+python3 server.py</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- 44 Tools Matrix -->
+    <section id="tools">
+      <h2 class="section-title">44 Specialized Forensic Engines</h2>
+      <p class="section-subtitle">Search by tool name, format, or steganography technique</p>
+
+      <div class="search-box">
+        <input type="text" id="toolSearch" placeholder="Search tools (e.g. zsteg, dtmf, ihdr, pcap, morse, bacon, audio)..." onkeyup="filterTools()">
+      </div>
+
+      <div class="tools-grid" id="toolsGrid">
+        <!-- Triage & Polyglot -->
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">auto_triage_challenge</span>
+            <span class="tool-category cat-triage">Triage</span>
+          </div>
+          <p class="tool-desc">Autonomous 5-stage master pipeline: magic verification, flag search, metadata extraction, polyglots, and signature scan in one shot.</p>
+        </div>
+
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">inspect_file_structure</span>
+            <span class="tool-category cat-triage">Triage</span>
+          </div>
+          <p class="tool-desc">Checks 25+ magic headers, calculates quadrant and global Shannon entropy, and carves trailing overlay bytes past EOF markers.</p>
+        </div>
+
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">detect_polyglots</span>
+            <span class="tool-category cat-triage">Triage</span>
+          </div>
+          <p class="tool-desc">Identifies dual-valid polyglot files (ZIP+JPG, PDF+ZIP, GIF+JS, HTML+PNG, RAR+JPEG) based on Corkami forensics.</p>
+        </div>
+
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">extract_metadata</span>
+            <span class="tool-category cat-triage">Metadata</span>
+          </div>
+          <p class="tool-desc">Deep EXIF/XMP/IPTC metadata extraction and thumbnail recovery using ExifTool with PIL fallback.</p>
+        </div>
+
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">grep_flag_patterns</span>
+            <span class="tool-category cat-triage">Strings</span>
+          </div>
+          <p class="tool-desc">Multi-encoding regex flag search across ASCII, UTF-8, UTF-16LE, and UTF-16BE binary byte streams.</p>
+        </div>
+
+        <!-- Image Spatial & LSB -->
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">statistical_steganalysis</span>
+            <span class="tool-category cat-image">Steganalysis</span>
+          </div>
+          <p class="tool-desc">Executes Chi-Square (χ²), Sample Pairs (SPA), and PoV tests to estimate hidden LSB payload percentage.</p>
+        </div>
+
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">solve_png_ihdr</span>
+            <span class="tool-category cat-image">PNG Repair</span>
+          </div>
+          <p class="tool-desc">Brute-forces correct PNG dimensions (Height/Width) against the IHDR CRC32 checksum to restore cropped challenge images.</p>
+        </div>
+
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">extract_bitplanes</span>
+            <span class="tool-category cat-image">Bitplanes</span>
+          </div>
+          <p class="tool-desc">Deconstructs and exports all 8 bitplanes across R, G, B, and Alpha channels (32 images) as high-contrast planes.</p>
+        </div>
+
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">analyze_png_chunks</span>
+            <span class="tool-category cat-image">PNG Chunks</span>
+          </div>
+          <p class="tool-desc">Parses ancillary PNG chunks (tEXt, zTXt, iTXt, pHYs, sRGB, private chunks), verifies CRCs, and detects anomalies.</p>
+        </div>
+
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">image_math_combine</span>
+            <span class="tool-category cat-image">Visual Crypto</span>
+          </div>
+          <p class="tool-desc">Combines two images with XOR, subtract, add, and difference operations to solve visual cryptography shares.</p>
+        </div>
+
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">analyze_gif_apng_frames</span>
+            <span class="tool-category cat-image">Animation</span>
+          </div>
+          <p class="tool-desc">Deconstructs GIF and APNG frames, extracts frame duration delays (which encode ASCII flag tokens), and exports frame deltas.</p>
+        </div>
+
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_zsteg_analysis</span>
+            <span class="tool-category cat-image">LSB / MSB</span>
+          </div>
+          <p class="tool-desc">Exhaustive LSB/MSB/channel/permutation analyzer on PNG and BMP formats via zsteg.</p>
+        </div>
+
+        <!-- Frequency & DCT -->
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_stegseek</span>
+            <span class="tool-category cat-image">Cracking</span>
+          </div>
+          <p class="tool-desc">Ultra-fast multithreaded Steghide passphrase cracker using RockYou wordlist dictionaries.</p>
+        </div>
+
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_outguess</span>
+            <span class="tool-category cat-image">DCT Stego</span>
+          </div>
+          <p class="tool-desc">Extracts data hidden in redundant JPEG DCT coefficients using OutGuess algorithm.</p>
+        </div>
+
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_jsteg</span>
+            <span class="tool-category cat-image">Quantization</span>
+          </div>
+          <p class="tool-desc">Recovers secret data embedded in quantized JPEG DCT coefficients via Jsteg.</p>
+        </div>
+
+        <!-- Audio -->
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">generate_audio_spectrogram</span>
+            <span class="tool-category cat-audio">Spectrogram</span>
+          </div>
+          <p class="tool-desc">Renders high-resolution spectrograms (linear/log scale, inferno/magma) to uncover hidden visual drawings and text.</p>
+        </div>
+
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">decode_dtmf_tones</span>
+            <span class="tool-category cat-audio">Acoustic</span>
+          </div>
+          <p class="tool-desc">Decodes telephone dial keypad frequencies using pure Python Goertzel / FFT energy bin detection.</p>
+        </div>
+
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">decode_audio_morse</span>
+            <span class="tool-category cat-audio">Morse Code</span>
+          </div>
+          <p class="tool-desc">Acoustic CW Morse code decoder converting audio pulse energy envelopes directly into plaintext flags.</p>
+        </div>
+
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">decode_sstv</span>
+            <span class="tool-category cat-audio">SSTV</span>
+          </div>
+          <p class="tool-desc">Decodes Slow-Scan TV transmissions (Robot36, Martin, Scottie) directly into rendered image frames.</p>
+        </div>
+
+        <!-- Text, Network, AI -->
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">decode_zero_width_chars</span>
+            <span class="tool-category cat-text">Unicode</span>
+          </div>
+          <p class="tool-desc">Extracts and parses ZWSP, ZWNJ, ZWJ, BOM, WJ, and variation selectors into binary and ASCII.</p>
+        </div>
+
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">solve_bacon_cipher</span>
+            <span class="tool-category cat-text">Cipher</span>
+          </div>
+          <p class="tool-desc">Solves Bacon's cipher across 24-letter and 26-letter alphabets, case variations, and bold/italic markup.</p>
+        </div>
+
+        <div class="tool-card" data-cat="network">
+          <div class="tool-header">
+            <span class="tool-name">extract_pcap_covert_channels</span>
+            <span class="tool-category cat-network">Network PCAP</span>
+          </div>
+          <p class="tool-desc">Parses PCAP captures for ICMP payloads, DNS subdomains/TXT exfiltration, and TCP SYN ISN leaks.</p>
+        </div>
+
+        <div class="tool-card" data-cat="ai">
+          <div class="tool-header">
+            <span class="tool-name">inspect_ai_model_stego</span>
+            <span class="tool-category cat-ai">AI Models</span>
+          </div>
+          <p class="tool-desc">Forensics on PyTorch (.pt/.pth), SafeTensors, and ONNX models for metadata injection and pickle RCE payloads.</p>
+        </div>
+
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">auto_decode_payload</span>
+            <span class="tool-category cat-text">CyberChef</span>
+          </div>
+          <p class="tool-desc">Master heuristic decoder testing Base64/32/85/91/58, Hex, URL, 25 Caesar shifts, Zlib, and Single-byte XOR keys.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>StegoKiller Ultra MCP Suite v3.0 • Developed by <strong>Knight_S</strong> • Open Source under Apache-2.0</p>
+      <p style="margin-top: 8px;">Maintained on <a href="https://github.com/shaymimran26-netizen/StegoKiller" target="_blank">GitHub</a></p>
+    </div>
+  </footer>
+
+  <script>
+    function openTab(evt, tabName) {
+      var tabContents = document.getElementsByClassName("tab-content");
+      for (var i = 0; i < tabContents.length; i++) {
+        tabContents[i].classList.remove("active");
+      }
+      var tabBtns = document.getElementsByClassName("tab-btn");
+      for (var i = 0; i < tabBtns.length; i++) {
+        tabBtns[i].classList.remove("active");
+      }
+      document.getElementById(tabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+    }
+
+    function copyCode(elementId) {
+      var text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(function() {
+        alert("Copied to clipboard!");
+      });
+    }
+
+    function filterTools() {
+      var input = document.getElementById("toolSearch").value.toLowerCase();
+      var cards = document.getElementsByClassName("tool-card");
+      for (var i = 0; i < cards.length; i++) {
+        var cardText = cards[i].innerText.toLowerCase();
+        if (cardText.includes(input)) {
+          cards[i].style.display = "block";
+        } else {
+          cards[i].style.display = "none";
+        }
+      }
+    }
+  </script>
+</body>
+</html>

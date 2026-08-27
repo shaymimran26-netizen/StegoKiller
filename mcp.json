@@ -1,0 +1,19 @@
+{
+  "name": "StegoKiller",
+  "version": "3.0.0",
+  "description": "The Ultimate Steganography, Digital Forensics & Covert Channel Analysis MCP Suite",
+  "author": "Knight_S",
+  "repository": "https://github.com/shaymimran26-netizen/StegoKiller",
+  "homepage": "https://shaymimran26-netizen.github.io/StegoKiller/",
+  "license": "Apache-2.0",
+  "toolsCount": 44,
+  "runtime": "python3",
+  "entrypoint": "server.py",
+  "categories": [
+    "security",
+    "forensics",
+    "steganography",
+    "ctf",
+    "reverse-engineering"
+  ]
+}

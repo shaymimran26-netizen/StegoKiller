@@ -1,0 +1,8 @@
+# Smithery configuration for StegoKiller MCP Server
+# Author: Knight_S
+startCommand:
+  type: stdio
+  config:
+    command: python3
+    args:
+      - server.py
