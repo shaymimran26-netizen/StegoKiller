@@ -40,13 +40,26 @@ def build_tool_manifest():
         print(f"[Warning] Failed to generate full tool manifest: {e}")
     return tool_list
 
-# Pre-generate server card payload
+# Pre-generate server card payload with connection and configSchema for Smithery CLI
 SERVER_CARD_PAYLOAD = {
     "serverInfo": {
         "name": "stegokiller",
         "version": "3.0.0"
     },
     "description": "StegoKiller Ultra Suite by Knight_S - Ultimate Steganography & Digital Forensics Suite (44+ Tools)",
+    "connection": {
+        "type": "sse",
+        "url": "https://stegokiller.onrender.com/sse"
+    },
+    "transport": {
+        "type": "sse",
+        "url": "https://stegokiller.onrender.com/sse"
+    },
+    "configSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+    },
     "tools": build_tool_manifest()
 }
 
@@ -69,6 +82,10 @@ async def health(request):
             "service": "StegoKiller MCP Server",
             "author": "Knight_S",
             "tools": len(SERVER_CARD_PAYLOAD["tools"]),
+            "connection": {
+                "type": "sse",
+                "url": "https://stegokiller.onrender.com/sse"
+            },
             "endpoints": {
                 "sse": "/sse",
                 "messages": "/messages",
