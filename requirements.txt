@@ -2,10 +2,11 @@
 # Author: Knight_S
 # Version: 3.0.0
 
-mcp>=1.3.0
+mcp>=1.3.0,<2.0.0
+fastmcp>=0.1.0
 gradio>=4.20.0
 uvicorn>=0.28.0
-fastapi>=0.110.0
+starlette>=0.36.0
 numpy>=1.24.0
 pillow>=10.0.0
 scipy>=1.11.0

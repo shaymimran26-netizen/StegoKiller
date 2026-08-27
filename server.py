@@ -41,7 +41,16 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 
 # FastMCP Framework
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except (ImportError, ModuleNotFoundError):
+    try:
+        from fastmcp import FastMCP
+    except (ImportError, ModuleNotFoundError):
+        try:
+            from mcp.server.mcpserver import MCPServer as FastMCP
+        except Exception:
+            from mcp.server import FastMCP
 
 # Scientific & Image Processing
 import numpy as np
