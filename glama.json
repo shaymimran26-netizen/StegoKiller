@@ -1,0 +1,19 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "name": "stegokiller",
+  "displayName": "StegoKiller",
+  "description": "StegoKiller MCP Server by Knight_S - Comprehensive Steganography, Digital Forensics & Covert-Channel Analysis Suite (44 Tools)",
+  "version": "3.0.0",
+  "author": "Knight_S",
+  "repository": "https://github.com/shaymimran26-netizen/StegoKiller",
+  "homepage": "https://shaymimran26-netizen.github.io/StegoKiller/",
+  "categories": [
+    "security",
+    "forensics",
+    "steganography",
+    "ctf",
+    "utilities"
+  ],
+  "runtime": "python",
+  "entrypoint": "server.py"
+}
