@@ -19,41 +19,64 @@ sys.path.insert(0, str(Path(__file__).parent))
 from server import mcp
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, HTMLResponse
-from starlette.routing import Route, Mount
+from starlette.routing import Route
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 
-async def get_server_card(request):
-    """Smithery & MCP discovery server-card schema containing all 44 tools."""
-    tools = await mcp.list_tools()
+def build_tool_manifest():
+    """Extract standard JSON schemas for all 44 registered tools."""
     tool_list = []
-    for t in tools:
-        tool_list.append({
-            "name": t.name,
-            "description": t.description,
-            "inputSchema": t.inputSchema
-        })
-    return JSONResponse({
-        "serverInfo": {
-            "name": "stegokiller",
-            "version": "3.0.0"
-        },
-        "description": "StegoKiller Ultra Suite by Knight_S - Ultimate Steganography & Digital Forensics Suite (44+ Tools)",
-        "tools": tool_list
-    })
+    try:
+        raw_tools = mcp._tool_manager.list_tools()
+        for t in raw_tools:
+            schema = getattr(t, "parameters", None) or getattr(t, "inputSchema", None) or {"type": "object", "properties": {}}
+            tool_list.append({
+                "name": t.name,
+                "description": (t.description or "").strip(),
+                "inputSchema": schema
+            })
+    except Exception as e:
+        print(f"[Warning] Failed to generate full tool manifest: {e}")
+    return tool_list
+
+# Pre-generate server card payload
+SERVER_CARD_PAYLOAD = {
+    "serverInfo": {
+        "name": "stegokiller",
+        "version": "3.0.0"
+    },
+    "description": "StegoKiller Ultra Suite by Knight_S - Ultimate Steganography & Digital Forensics Suite (44+ Tools)",
+    "tools": build_tool_manifest()
+}
+
+async def get_server_card(request):
+    """Smithery & MCP discovery server-card schema."""
+    return JSONResponse(
+        SERVER_CARD_PAYLOAD,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 async def health(request):
     """Health check endpoint."""
-    return JSONResponse({
-        "status": "online",
-        "service": "StegoKiller MCP Server",
-        "author": "Knight_S",
-        "tools": 44,
-        "endpoints": {
-            "sse": "/sse",
-            "messages": "/messages",
-            "server_card": "/.well-known/mcp/server-card.json"
-        }
-    })
+    return JSONResponse(
+        {
+            "status": "online",
+            "service": "StegoKiller MCP Server",
+            "author": "Knight_S",
+            "tools": len(SERVER_CARD_PAYLOAD["tools"]),
+            "endpoints": {
+                "sse": "/sse",
+                "messages": "/messages",
+                "server_card": "/.well-known/mcp/server-card.json"
+            }
+        },
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 async def index(request):
     """Landing and web documentation page."""
@@ -64,6 +87,15 @@ async def index(request):
 
 # Initialize Starlette FastMCP SSE App
 app = mcp.sse_app()
+
+# Add CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Register Discovery, Health & Web Routes
 app.routes.insert(0, Route("/.well-known/mcp/server-card.json", get_server_card))
