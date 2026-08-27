@@ -1,0 +1,13 @@
+libimage-exiftool-perl
+foremost
+binwalk
+steghide
+outguess
+stegsnow
+sox
+libsox-fmt-all
+multimon-ng
+ffmpeg
+p7zip-full
+zbar-tools
+qpdf
