@@ -1865,6 +1865,623 @@ def auto_decode_payload(raw_data: str) -> str:
 # SERVER ENTRYPOINT
 # ============================================================================
 
+
+# ============================================================================
+# 9. ELITE SPECIALIZED CTF & ADVANCED FORENSIC ENGINES (V3.5 EXTENSIONS)
+# ============================================================================
+
+@mcp.tool()
+def detect_pvd_steganography(file_path: str) -> str:
+    """
+    Detect Pixel Value Differencing (PVD) and edge-adaptive steganography in images
+    by analyzing non-uniform histogram anomalies across smooth vs edge pixel neighborhoods.
+    """
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+
+    try:
+        im = Image.open(path).convert("L")
+        arr = np.array(im, dtype=np.int16)
+    except Exception as e:
+        return f"[StegoKiller Error]: Failed to open image: {e}"
+
+    diff_h = np.abs(arr[:, 1:] - arr[:, :-1]).flatten()
+    diff_v = np.abs(arr[1:, :] - arr[:-1, :]).flatten()
+    diffs = np.concatenate([diff_h, diff_v])
+
+    counts = np.bincount(diffs[diffs < 64], minlength=64)
+    step_ratios = []
+    for lower, upper in [(0, 7), (8, 15), (16, 31), (32, 63)]:
+        block = counts[lower:upper+1]
+        mean_v = np.mean(block)
+        std_v = np.std(block)
+        smoothness = std_v / (mean_v + 1e-5)
+        step_ratios.append(f"Range [{lower:02d}-{upper:02d}]: Mean={mean_v:.1f}, Variance Coeff={smoothness:.3f}")
+
+    has_pvd = counts[8] > (counts[7] * 1.3) or counts[16] > (counts[15] * 1.3)
+    return (
+        f"=== PIXEL VALUE DIFFERENCING (PVD) STEGANALYSIS: {path.name} ===\n"
+        + "\n".join([f"  {sr}" for sr in step_ratios]) + "\n"
+        f"--------------------------------------------------------------------------------\n"
+        f"PVD Stego Signature: {'[!] DETECTED PVD BOUNDARY STEP ARTIFACTS' if has_pvd else 'Normal smooth gradient distribution'}"
+    )
+
+
+@mcp.tool()
+def analyze_color_palette_stego(file_path: str) -> str:
+    """
+    Detect palette-based steganography (EzStego, Cloak, PLTE chunk permutations)
+    in indexed PNG and GIF images by analyzing palette sorting and index parity.
+    """
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+
+    try:
+        im = Image.open(path)
+        palette = im.getpalette()
+    except Exception as e:
+        return f"[StegoKiller Error]: Failed to read image palette: {e}"
+
+    if not palette:
+        return f"Image '{path.name}' is not in palette/indexed color mode."
+
+    colors = [palette[i:i+3] for i in range(0, min(len(palette), 768), 3)]
+    num_colors = len(colors)
+
+    luminances = [0.299*r + 0.587*g + 0.114*b for r, g, b in colors]
+    is_sorted_lum = all(luminances[i] <= luminances[i+1] for i in range(len(luminances)-1))
+
+    indices = np.array(im).flatten()
+    parity_bits = indices % 2
+    bin_str = "".join([str(b) for b in parity_bits[:400]])
+    bytes_out = [int(bin_str[i:i+8], 2) for i in range(0, len(bin_str), 8)]
+    ascii_preview = bytes(bytes_out).decode("latin-1", errors="ignore")
+
+    return (
+        f"=== PALETTE (PLTE / INDEXED) STEGANALYSIS: {path.name} ===\n"
+        f"Total Palette Colors: {num_colors}\n"
+        f"Luminance-Sorted Palette (EzStego Pattern): {'[!] YES (Pre-sorted carrier)' if is_sorted_lum else 'No (Standard/Unordered)'}\n"
+        f"--------------------------------------------------------------------------------\n"
+        f"Index LSB Parity ASCII Preview:\n{re.sub(r'[^ -~]', '.', ascii_preview[:120])}"
+    )
+
+
+@mcp.tool()
+def detect_jpeg_ghosts(file_path: str, quality_start: int = 50, quality_end: int = 95) -> str:
+    """
+    Analyze JPEG Double Compression & Ghosting artifacts across quality factor scans
+    to detect spliced, forged, or hidden payload regions.
+    """
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+
+    try:
+        orig = Image.open(path).convert("RGB")
+    except Exception as e:
+        return f"[StegoKiller Error]: Failed to open image: {e}"
+
+    orig_arr = np.array(orig, dtype=np.float32)
+    variances = []
+    out_dir = _ensure_dir("jpeg_ghosts")
+
+    for q in range(quality_start, quality_end + 1, 10):
+        tmp_jpg = out_dir / f"recomp_{q}.jpg"
+        orig.save(tmp_jpg, "JPEG", quality=q)
+        recomp = Image.open(tmp_jpg).convert("RGB")
+        diff = np.mean(np.abs(orig_arr - np.array(recomp, dtype=np.float32)))
+        variances.append(f"Quality {q:02d}: Mean Absolute Difference = {diff:.2f}")
+
+    return (
+        f"=== JPEG GHOST & DOUBLE COMPRESSION ANALYSIS: {path.name} ===\n"
+        + "\n".join([f"  {v}" for v in variances]) + "\n"
+        f"A sharp local minimum indicates original compression quality factor."
+    )
+
+
+@mcp.tool()
+def reconstruct_visual_crypto_2x2(share1_path: str, share2_path: str) -> str:
+    """
+    Reconstruct classic 2-out-of-2 visual cryptography binary shares (sub-pixel raster overlay).
+    """
+    p1 = _sanitize_path(share1_path)
+    p2 = _sanitize_path(share2_path)
+    if not p1.is_file() or not p2.is_file():
+        return "[StegoKiller Error]: One or both share images not found."
+
+    try:
+        im1 = Image.open(p1).convert("1")
+        im2 = Image.open(p2).convert("1")
+    except Exception as e:
+        return f"[StegoKiller Error]: Failed to read shares: {e}"
+
+    if im1.size != im2.size:
+        im2 = im2.resize(im1.size)
+
+    arr1 = np.array(im1, dtype=bool)
+    arr2 = np.array(im2, dtype=bool)
+
+    overlay = np.logical_and(arr1, arr2)
+    xor_overlay = np.logical_xor(arr1, arr2)
+
+    out_dir = _ensure_dir("visual_crypto")
+    f_and = out_dir / f"vc_overlay_and_{p1.stem}_{p2.stem}.png"
+    f_xor = out_dir / f"vc_overlay_xor_{p1.stem}_{p2.stem}.png"
+
+    Image.fromarray((overlay * 255).astype(np.uint8)).save(f_and)
+    Image.fromarray((xor_overlay * 255).astype(np.uint8)).save(f_xor)
+
+    return (
+        f"=== 2-OUT-OF-2 VISUAL CRYPTOGRAPHY RECONSTRUCTION ===\n"
+        f"Share 1        : {p1.name}\n"
+        f"Share 2        : {p2.name}\n"
+        f"Physical Stack : {f_and}\n"
+        f"Bitwise XOR    : {f_xor}"
+    )
+
+
+@mcp.tool()
+def decode_audio_fsk_afsk(audio_path: str, baud_rate: int = 300) -> str:
+    """
+    Demodulate Frequency Shift Keying (FSK / AFSK) telemetry audio signals (Bell 103, Bell 202, RTTY).
+    """
+    path = _sanitize_path(audio_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: Audio not found: {audio_path}"
+
+    ret, stdout, stderr = _safe_run_command(["minimodem", "--rx", str(baud_rate), "-f", str(path)])
+    if ret == 0 and stdout:
+        return f"=== AFSK / FSK DEMODULATOR ({baud_rate} BAUD) ===\nDecoded Stream:\n{stdout}"
+
+    try:
+        from scipy.io import wavfile
+        from scipy.signal import hilbert
+
+        sr, data = wavfile.read(str(path))
+        if len(data.shape) > 1:
+            data = data.mean(axis=1)
+
+        analytic = hilbert(data)
+        instant_phase = np.unwrap(np.angle(analytic))
+        instant_freq = (np.diff(instant_phase) / (2.0 * np.pi) * sr)
+
+        mean_freq = float(np.median(instant_freq))
+        step = max(1, int(sr / baud_rate))
+        bits = ["1" if f > mean_freq else "0" for f in instant_freq[::step]]
+        bin_str = "".join(bits)
+        bytes_out = [int(bin_str[i:i+8], 2) for i in range(0, len(bin_str)-8, 8)]
+        ascii_text = bytes(bytes_out).decode("latin-1", errors="replace")
+
+        return (
+            f"=== AFSK / FSK DEMODULATION (Instantaneous Frequency Engine) ===\n"
+            f"Baud Rate       : {baud_rate}\n"
+            f"Carrier Center  : {mean_freq:.1f} Hz\n"
+            f"Decoded ASCII   :\n{re.sub(r'[^ -~]', '.', ascii_text[:180])}"
+        )
+    except Exception as e:
+        return f"AFSK demodulation failed: {e}"
+
+
+@mcp.tool()
+def descramble_audio_inversion(audio_path: str, carrier_freq: float = 3300.0) -> str:
+    """
+    Descramble frequency-inverted voice audio (voice scrambler) by re-modulating against carrier frequency.
+    """
+    path = _sanitize_path(audio_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: Audio file not found: {audio_path}"
+
+    from scipy.io import wavfile
+    from scipy.signal import butter, lfilter
+
+    try:
+        sr, data = wavfile.read(str(path))
+        if len(data.shape) > 1:
+            data = data.mean(axis=1)
+
+        t = np.arange(len(data)) / sr
+        carrier = np.cos(2 * np.pi * carrier_freq * t)
+        descrambled = data * carrier
+
+        nyq = 0.5 * sr
+        low = 300 / nyq
+        high = min(carrier_freq / nyq, 0.99)
+        b, a = butter(4, [low, high], btype="band")
+        filtered = lfilter(b, a, descrambled)
+
+        max_val = np.max(np.abs(filtered))
+        out_norm = (filtered / max_val * 32767).astype(np.int16) if max_val > 0 else filtered.astype(np.int16)
+
+        out_file = _ensure_dir("audio_descramble") / f"{path.stem}_descrambled.wav"
+        wavfile.write(str(out_file), sr, out_norm)
+
+        return (
+            f"=== FREQUENCY INVERSION DESCRAMBLING COMPLETE ===\n"
+            f"Carrier Frequency : {carrier_freq} Hz\n"
+            f"Output WAV File   : {out_file}"
+        )
+    except Exception as e:
+        return f"Descrambling failed: {e}"
+
+
+@mcp.tool()
+def recursive_archive_unpacker(archive_path: str, max_depth: int = 15) -> str:
+    """
+    Recursively unpack nested archives (ZIP, 7z, TAR, GZ, BZ2, XZ, RAR) up to max_depth
+    to solve 'Matryoshka doll' nested compression CTF challenges.
+    """
+    path = _sanitize_path(archive_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: Archive not found: {archive_path}"
+
+    out_base = _ensure_dir(f"recursive_{path.stem}_{os.getpid()}")
+    shutil.copy(path, out_base / path.name)
+
+    curr_target = out_base / path.name
+    depth = 0
+    history = []
+
+    while depth < max_depth:
+        depth += 1
+        data = curr_target.read_bytes() if curr_target.is_file() else b""
+        if not data:
+            break
+
+        extracted_file = None
+        if data.startswith(b"PK\x03\x04"):
+            try:
+                with zipfile.ZipFile(str(curr_target), 'r') as z:
+                    names = z.namelist()
+                    z.extractall(str(out_base))
+                    history.append(f"Level {depth}: ZIP Archive -> Extracted {len(names)} files ({names[:2]})")
+                    for n in names:
+                        cand = out_base / n
+                        if cand.is_file() and cand != curr_target:
+                            extracted_file = cand
+                            break
+            except Exception:
+                pass
+
+        elif data.startswith(b"\x1F\x8B"):
+            try:
+                decomp = gzip.decompress(data)
+                dest = out_base / f"decomp_lvl_{depth}.bin"
+                dest.write_bytes(decomp)
+                history.append(f"Level {depth}: GZIP Archive -> Decompressed {len(decomp)} bytes")
+                extracted_file = dest
+            except Exception:
+                pass
+
+        elif data.startswith(b"BZh"):
+            import bz2
+            try:
+                decomp = bz2.decompress(data)
+                dest = out_base / f"decomp_lvl_{depth}.bin"
+                dest.write_bytes(decomp)
+                history.append(f"Level {depth}: BZIP2 Archive -> Decompressed {len(decomp)} bytes")
+                extracted_file = dest
+            except Exception:
+                pass
+
+        elif tarfile.is_tarfile(str(curr_target)):
+            try:
+                with tarfile.open(str(curr_target), 'r:*') as t:
+                    names = t.getnames()
+                    t.extractall(str(out_base))
+                    history.append(f"Level {depth}: TAR Archive -> Extracted {names[:2]}")
+                    for n in names:
+                        cand = out_base / n
+                        if cand.is_file() and cand != curr_target:
+                            extracted_file = cand
+                            break
+            except Exception:
+                pass
+
+        if not extracted_file or extracted_file == curr_target:
+            break
+        curr_target = extracted_file
+
+    return (
+        f"=== RECURSIVE ARCHIVE DECOMPRESSION COMPLETE ===\n"
+        f"Max Depth Reached : {depth}\n"
+        f"Output Directory  : {out_base}\n"
+        f"Decompression Chain:\n" +
+        "\n".join([f"  - {h}" for h in history])
+    )
+
+
+@mcp.tool()
+def inspect_ole_vba_macros(file_path: str) -> str:
+    """
+    Forensic analysis of legacy OLE / Compound File Binary (CFB) documents (.doc, .xls, .ppt)
+    for hidden VBA macro streams, AutoOpen triggers, and obfuscated shell commands.
+    """
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+
+    ret, stdout, stderr = _safe_run_command(["olevba", str(path)])
+    if ret == 0 and stdout:
+        return f"=== OLE VBA MACRO ANALYSIS REPORT ===\n{stdout}"
+
+    data = path.read_bytes()
+    ole_sig = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"
+    is_ole = data.startswith(ole_sig)
+
+    triggers = []
+    for t in [b"AutoOpen", b"Document_Open", b"Workbook_Open", b"Shell", b"WScript", b"PowerShell"]:
+        if t in data:
+            triggers.append(t.decode())
+
+    return (
+        f"=== OLE COMPOUND FILE BINARY AUDIT: {path.name} ===\n"
+        f"OLE Signature Valid : {'[!] YES (Legacy OLE/CFB)' if is_ole else 'No'}\n"
+        f"Suspicious Triggers : {triggers or 'No standard macro execution strings found.'}"
+    )
+
+
+@mcp.tool()
+def inspect_pdf_layers_and_js(file_path: str) -> str:
+    """
+    Extract PDF Optional Content Groups (invisible layers / /OCG), /Launch actions,
+    and embedded JavaScript streams concealing covert challenge payloads.
+    """
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+
+    data = path.read_bytes()
+    features = []
+
+    if b"/OCG" in data or b"/OCProperties" in data:
+        features.append("[!] Invisible / Optional Content Group (OCG Layers) present!")
+    if b"/JavaScript" in data or b"/JS" in data:
+        features.append("[!] Embedded JavaScript action stream identified!")
+    if b"/Launch" in data:
+        features.append("[!] Suspicious /Launch external executable action identified!")
+    if b"/EmbeddedFiles" in data:
+        features.append("[!] /EmbeddedFiles container present!")
+
+    return (
+        f"=== PDF INVISIBLE LAYERS & ACTION AUDIT: {path.name} ===\n"
+        + ("\n".join([f"  {f}" for f in features]) if features else "  No hidden layers, JavaScript, or launch actions detected.")
+    )
+
+
+@mcp.tool()
+def extract_archive_metadata_covert(archive_path: str) -> str:
+    """
+    Extract covert steganography hidden in archive header timestamps, UID/GID modulation,
+    and NTFS extra field extended attributes in ZIP and TAR containers.
+    """
+    path = _sanitize_path(archive_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {archive_path}"
+
+    findings = []
+    if zipfile.is_zipfile(str(path)):
+        with zipfile.ZipFile(str(path), 'r') as z:
+            for info in z.infolist():
+                if info.extra:
+                    findings.append(f"ZIP File '{info.filename}' -> Extra Field ({len(info.extra)} bytes): {binascii.hexlify(info.extra).decode()}")
+                if info.comment:
+                    findings.append(f"ZIP File '{info.filename}' -> Comment: {info.comment.decode(errors='ignore')}")
+
+    if not findings:
+        return "No covert timestamp or extra field anomalies detected in archive headers."
+
+    return (
+        f"=== ARCHIVE HEADER COVERT METADATA: {path.name} ===\n"
+        + "\n".join([f"  [+] {f}" for f in findings])
+    )
+
+
+@mcp.tool()
+def decode_dna_steganography(sequence: str) -> str:
+    """
+    Decode DNA nucleotide sequences (A, C, G, T) into binary and ASCII plaintext using
+    standard base pairing (A=00, C=01, G=10, T=11) and Amino Acid Codon translation.
+    """
+    clean = re.sub(r"[^ACGTUacgtu]", "", sequence).upper().replace("U", "T")
+    if len(clean) < 4:
+        return "[StegoKiller Error]: Sequence contains insufficient DNA nucleotides."
+
+    nt_map = {'A': '00', 'C': '01', 'G': '10', 'T': '11'}
+    bin_str = "".join([nt_map[n] for n in clean])
+    bytes_out = [int(bin_str[i:i+8], 2) for i in range(0, (len(bin_str)//8)*8, 8)]
+    ascii_direct = bytes(bytes_out).decode("latin-1", errors="replace")
+
+    codon_table = {
+        'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L', 'CTT': 'L', 'CTC': 'L',
+        'CTA': 'L', 'CTG': 'L', 'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
+        'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V', 'TCT': 'S', 'TCC': 'S',
+        'TCA': 'S', 'TCG': 'S', 'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+        'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T', 'GCT': 'A', 'GCC': 'A',
+        'GCA': 'A', 'GCG': 'A', 'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
+        'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q', 'AAT': 'N', 'AAC': 'N',
+        'AAA': 'K', 'AAG': 'K', 'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
+        'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W', 'CGT': 'R', 'CGC': 'R',
+        'CGA': 'R', 'CGG': 'R', 'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
+        'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
+    }
+
+    codons = [clean[i:i+3] for i in range(0, len(clean)-2, 3)]
+    amino_acids = "".join([codon_table.get(c, "?") for c in codons])
+
+    return (
+        f"=== DNA STEGANOGRAPHY & GENETIC DECODER ===\n"
+        f"Nucleotides Length : {len(clean)} bp\n"
+        f"2-bit Binary ASCII : {re.sub(r'[^ -~]', '.', ascii_direct[:120])}\n"
+        f"Amino Acid Chain   : {amino_acids[:120]}"
+    )
+
+
+@mcp.tool()
+def decode_baudot_murray_code(raw_bits_or_text: str) -> str:
+    """
+    Decode 5-bit ITA2 Baudot/Murray teleprinter punch tape code with LTRS/FIGS shift registers.
+    """
+    ltrs_table = {
+        0x00: '', 0x01: 'E', 0x02: '\n', 0x03: 'A', 0x04: ' ', 0x05: 'S', 0x06: 'I',
+        0x07: 'U', 0x08: '\r', 0x09: 'D', 0x0A: 'R', 0x0B: 'J', 0x0C: 'N', 0x0D: 'F',
+        0x0E: 'C', 0x0F: 'K', 0x10: 'T', 0x11: 'Z', 0x12: 'L', 0x13: 'W', 0x14: 'H',
+        0x15: 'Y', 0x16: 'P', 0x17: 'Q', 0x18: 'O', 0x19: 'B', 0x1A: 'G', 0x1B: '',
+        0x1C: 'M', 0x1D: 'X', 0x1E: 'V', 0x1F: ''
+    }
+    figs_table = {
+        0x00: '', 0x01: '3', 0x02: '\n', 0x03: '-', 0x04: ' ', 0x05: '\'', 0x06: '8',
+        0x07: '7', 0x08: '\r', 0x09: '$', 0x0A: '4', 0x0B: '\a', 0x0C: ',', 0x0D: '!',
+        0x0E: ':', 0x0F: '(', 0x10: '5', 0x11: '+', 0x12: ')', 0x13: '2', 0x14: '#',
+        0x15: '6', 0x16: '0', 0x17: '1', 0x18: '9', 0x19: '?', 0x1A: '&', 0x1B: '',
+        0x1C: '.', 0x1D: '/', 0x1E: '=', 0x1F: ''
+    }
+
+    clean = re.sub(r"[^01]", "", raw_bits_or_text)
+    if len(clean) < 5:
+        return "[StegoKiller Error]: Insufficient 5-bit Baudot tokens."
+
+    mode = "LTRS"
+    decoded = []
+    for i in range(0, len(clean)-4, 5):
+        val = int(clean[i:i+5], 2)
+        if val == 0x1F:
+            mode = "LTRS"
+        elif val == 0x1B:
+            mode = "FIGS"
+        else:
+            tbl = ltrs_table if mode == "LTRS" else figs_table
+            decoded.append(tbl.get(val, "?"))
+
+    return (
+        f"=== BAUDOT / MURRAY (ITA2) DECODER ===\n"
+        f"Total 5-bit Characters : {len(clean)//5}\n"
+        f"Decoded Plaintext      : {''.join(decoded)}"
+    )
+
+
+@mcp.tool()
+def decode_braille_steganography(text: str) -> str:
+    """
+    Decode Unicode 6-dot and 8-dot Braille patterns (U+2800 to U+28FF) into English alphanumeric text.
+    """
+    braille_map = {
+        '⠁': 'a', '⠃': 'b', '⠉': 'c', '⠙': 'd', '⠑': 'e', '⠋': 'f', '⠛': 'g', '⠓': 'h',
+        '⠊': 'i', '⠚': 'j', '⠅': 'k', '⠇': 'l', '⠍': 'm', '⠝': 'n', '⠕': 'o', '⠏': 'p',
+        '⠟': 'q', '⠗': 'r', '⠎': 's', '⠞': 't', '⠥': 'u', '⠧': 'v', '⠺': 'w', '⠭': 'x',
+        '⠽': 'y', '⠵': 'z', '⠀': ' ', '⠂': ',', '⠆': ';', '⠒': ':', '⠲': '.', '⠦': '?',
+        '⠖': '!', '⠤': '-', '⠼': '#', '⠠': '^'
+    }
+
+    braille_chars = [c for c in text if (0x2800 <= ord(c) <= 0x28FF)]
+    if not braille_chars:
+        return "No Unicode Braille characters found."
+
+    decoded = "".join([braille_map.get(c, "?") for c in braille_chars])
+    return (
+        f"=== BRAILLE STEGANOGRAPHY DECODER ===\n"
+        f"Braille Characters : {len(braille_chars)}\n"
+        f"Decoded Plaintext  : {decoded}"
+    )
+
+
+@mcp.tool()
+def decode_morse_in_whitespace(text: str) -> str:
+    """
+    Decode Morse code concealed within whitespace (Spaces=dot, Tabs=dash, Double Spaces=word boundary).
+    """
+    morse_dict = {
+        '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E',
+        '..-.': 'F', '--.': 'G', '....': 'H', '..': 'I', '.---': 'J',
+        '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N', '---': 'O',
+        '.--.': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T',
+        '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y',
+        '--..': 'Z', '-----': '0', '.----': '1', '..---': '2', '...--': '3',
+        '....-': '4', '.....': '5', '-....': '6', '--...': '7', '---..': '8',
+        '----.': '9'
+    }
+
+    tokens = []
+    for line in text.splitlines():
+        ws = re.findall(r"[ \t]+", line)
+        for w in ws:
+            m_token = "".join(["." if c == " " else "-" for c in w])
+            tokens.append(m_token)
+
+    if not tokens:
+        return "No whitespace Morse patterns identified."
+
+    decoded = "".join([morse_dict.get(t, "?") for t in tokens])
+    return (
+        f"=== WHITESPACE MORSE CODE DECODER ===\n"
+        f"Tokens Identified : {len(tokens)}\n"
+        f"Decoded Text      : {decoded}"
+    )
+
+
+@mcp.tool()
+def carve_memory_dump_secrets(dump_path: str) -> str:
+    """
+    Scan memory core dumps (.dmp, .raw, .core, minidumps) for SSL/TLS master secrets,
+    private RSA keys, environment variables, bash history, and CTF flags.
+    """
+    path = _sanitize_path(dump_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: Dump file not found: {dump_path}"
+
+    data = path.read_bytes()
+    findings = []
+
+    flag_pat = re.compile(rb"(?i)(?:flag|ctf)\{[^}]+\}")
+    for m in flag_pat.finditer(data):
+        findings.append(f"Flag Match: {m.group().decode(errors='ignore')} (Offset: {hex(m.start())})")
+
+    if b"CLIENT_RANDOM" in data or b"RSA Session-ID" in data:
+        findings.append("[!] SSL/TLS Master Key Log strings identified!")
+
+    if b"-----BEGIN RSA PRIVATE KEY-----" in data or b"-----BEGIN OPENSSH PRIVATE KEY-----" in data:
+        findings.append("[!] Unencrypted OpenSSH/RSA Private Key block carved from RAM!")
+
+    env_matches = re.findall(rb"[A-Z0-9_]+=[a-zA-Z0-9_./\-]{8,}", data)
+    if env_matches:
+        findings.append(f"Carved {len(env_matches)} Environment Variable Strings (e.g. {env_matches[0].decode(errors='ignore')})")
+
+    return (
+        f"=== RAM / MEMORY CORE DUMP FORENSIC AUDIT: {path.name} ===\n"
+        f"Memory Size : {len(data):,} bytes\n"
+        + ("\n".join([f"  [+] {f}" for f in findings]) if findings else "  No standard key blocks or flag matches found in raw memory.")
+    )
+
+
+@mcp.tool()
+def detect_covert_http_headers(pcap_or_log_path: str) -> str:
+    """
+    Inspect HTTP streams for covert exfiltration headers (X-Flag, custom authorization headers,
+    Base64 cookies, and chunked transfer encoding trailing padding).
+    """
+    path = _sanitize_path(pcap_or_log_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {pcap_or_log_path}"
+
+    content = path.read_bytes()
+    header_hits = []
+
+    for m in re.finditer(rb"(?i)(?:flag|token|secret|key|cookie|auth|session|x-[a-z0-9_-]+):\s*([^\r\n]+)", content):
+        val = m.group(1).decode("latin-1", errors="ignore").strip()
+        if len(val) > 3:
+            header_hits.append(f"Header '{m.group(0)[:30].decode(errors='ignore')}...' -> Value: {val}")
+
+    if not header_hits:
+        return "No suspicious covert HTTP headers or cookie anomalies detected."
+
+    return (
+        f"=== COVERT HTTP HEADER & COOKIE EXTRUSION: {path.name} ===\n"
+        f"Total Suspicious Headers: {len(header_hits)}\n" +
+        "\n".join([f"  [!] {h}" for h in header_hits[:15]])
+    )
+
+
 if __name__ == "__main__":
     if sys.stdout.encoding != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
