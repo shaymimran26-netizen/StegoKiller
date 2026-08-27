@@ -1,3 +1,13 @@
+# Hugging Face ZeroGPU compatibility handler
+try:
+    import spaces
+    @spaces.GPU(duration=1)
+    def _gpu_init():
+        return True
+    _gpu_init()
+except Exception:
+    pass
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
