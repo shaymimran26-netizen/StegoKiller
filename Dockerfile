@@ -39,14 +39,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zbar-tools \
     qpdf \
     default-jre-headless \
-    wordlists \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Decompress rockyou.txt wordlist
-RUN if [ -f /usr/share/wordlists/rockyou.txt.gz ]; then \
-        gunzip -k /usr/share/wordlists/rockyou.txt.gz; \
-    fi
+# Download rockyou.txt wordlist
+RUN mkdir -p /usr/share/wordlists && \
+    wget -q -O /usr/share/wordlists/rockyou.txt.gz "https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt.gz" && \
+    gunzip /usr/share/wordlists/rockyou.txt.gz
 
 # Install Ruby steganography tool (zsteg)
 RUN gem install zsteg
