@@ -354,20 +354,35 @@ def detect_polyglots(file_path: str) -> str:
     data = path.read_bytes()
     detected_formats = []
 
-    if b"PK\x03\x04" in data:
-        detected_formats.append(f"ZIP Archive (Offset: {hex(data.find(b'PK\x03\x04'))})")
-    if b"\xFF\xD8\xFF" in data:
-        detected_formats.append(f"JPEG Image (Offset: {hex(data.find(b'\xFF\xD8\xFF'))})")
-    if b"\x89PNG\r\n\x1a\n" in data:
-        detected_formats.append(f"PNG Image (Offset: {hex(data.find(b'\x89PNG\r\n\x1a\n'))})")
-    if b"%PDF" in data:
-        detected_formats.append(f"PDF Document (Offset: {hex(data.find(b'%PDF'))})")
-    if b"GIF87a" in data or b"GIF89a" in data:
-        detected_formats.append(f"GIF Image (Offset: {hex(max(data.find(b'GIF87a'), data.find(b'GIF89a')))})")
-    if b"Rar!\x1A\x07" in data:
-        detected_formats.append(f"RAR Archive (Offset: {hex(data.find(b'Rar!\x1A\x07'))})")
-    if b"7z\xBC\xAF\x27\x1C" in data:
-        detected_formats.append(f"7-Zip Archive (Offset: {hex(data.find(b'7z\xBC\xAF\x27\x1C'))})")
+    sig_zip = b"PK\x03\x04"
+    if sig_zip in data:
+        detected_formats.append("ZIP Archive (Offset: " + hex(data.find(sig_zip)) + ")")
+
+    sig_jpg = b"\xFF\xD8\xFF"
+    if sig_jpg in data:
+        detected_formats.append("JPEG Image (Offset: " + hex(data.find(sig_jpg)) + ")")
+
+    sig_png = b"\x89PNG\r\n\x1a\n"
+    if sig_png in data:
+        detected_formats.append("PNG Image (Offset: " + hex(data.find(sig_png)) + ")")
+
+    sig_pdf = b"%PDF"
+    if sig_pdf in data:
+        detected_formats.append("PDF Document (Offset: " + hex(data.find(sig_pdf)) + ")")
+
+    sig_gif1 = b"GIF87a"
+    sig_gif2 = b"GIF89a"
+    if sig_gif1 in data or sig_gif2 in data:
+        detected_formats.append("GIF Image (Offset: " + hex(max(data.find(sig_gif1), data.find(sig_gif2))) + ")")
+
+    sig_rar = b"Rar!\x1A\x07"
+    if sig_rar in data:
+        detected_formats.append("RAR Archive (Offset: " + hex(data.find(sig_rar)) + ")")
+
+    sig_7z = b"7z\xBC\xAF\x27\x1C"
+    if sig_7z in data:
+        detected_formats.append("7-Zip Archive (Offset: " + hex(data.find(sig_7z)) + ")")
+
     if b"/*" in data and b"*/" in data and (b"alert(" in data or b"eval(" in data or b"function" in data):
         detected_formats.append("JavaScript Polyglot Markers (/* ... */ / JS payload)")
 
