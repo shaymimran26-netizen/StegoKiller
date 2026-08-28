@@ -35,6 +35,9 @@ import tempfile
 import subprocess
 import unicodedata
 import zipfile
+import tarfile
+import logging
+import concurrent.futures
 import urllib.parse
 import json
 from pathlib import Path
@@ -58,6 +61,60 @@ from PIL import Image, ImageOps, ImageChops
 
 # Initialize FastMCP Server
 mcp = FastMCP("StegoKiller")
+
+# Logger Setup
+logger = logging.getLogger("stegokiller")
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)s] %(message)s")
+
+MAX_MEMORY_SCAN_BYTES = 500 * 1024 * 1024  # 500 MB RAM guard
+MAX_ARCHIVE_EXTRACT_BYTES = 1000 * 1024 * 1024  # 1 GB decompression guard
+
+def _validate_output_path(output_path: str, default_dir: Path, default_filename: str = "") -> Path:
+    """Safely validate output path to prevent directory traversal and arbitrary file overwrite."""
+    if not output_path or not str(output_path).strip():
+        if default_filename:
+            return default_dir / default_filename
+        return default_dir
+    resolved = Path(os.path.expanduser(os.path.expandvars(str(output_path)))).resolve()
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    return resolved
+
+def _safe_extract_zip(zf: zipfile.ZipFile, target_dir: Path, max_bytes: int = MAX_ARCHIVE_EXTRACT_BYTES) -> List[str]:
+    """Extract zip archive members securely preventing Zip Slip traversal and size bomb DoS."""
+    extracted = []
+    total_size = 0
+    target_resolved = target_dir.resolve()
+    for member in zf.infolist():
+        if ".." in member.filename or member.filename.startswith("/"):
+            continue
+        dest = (target_dir / member.filename).resolve()
+        if not str(dest).startswith(str(target_resolved)):
+            continue
+        total_size += member.file_size
+        if total_size > max_bytes:
+            raise ValueError(f"Decompressed zip archive exceeds size cap ({max_bytes} bytes)")
+        zf.extract(member, path=str(target_dir))
+        extracted.append(member.filename)
+    return extracted
+
+def _safe_extract_tar(tar: tarfile.TarFile, target_dir: Path, max_bytes: int = MAX_ARCHIVE_EXTRACT_BYTES) -> List[str]:
+    """Extract tar archive members securely preventing Tar Slip traversal and size bomb DoS."""
+    extracted = []
+    total_size = 0
+    target_resolved = target_dir.resolve()
+    for member in tar.getmembers():
+        if ".." in member.name or member.name.startswith("/"):
+            continue
+        dest = (target_dir / member.name).resolve()
+        if not str(dest).startswith(str(target_resolved)):
+            continue
+        total_size += member.size
+        if total_size > max_bytes:
+            raise ValueError(f"Decompressed tar archive exceeds size cap ({max_bytes} bytes)")
+        tar.extract(member, path=str(target_dir))
+        extracted.append(member.name)
+    return extracted
 
 # Global Configuration
 OUTPUT_BASE_DIR = Path("/tmp/stego_mcp_output")
@@ -280,7 +337,7 @@ def scan_and_carve_binwalk(file_path: str, extract: bool = False) -> str:
         return f"[StegoKiller Error]: File not found: {file_path}"
 
     out_dir = _ensure_dir(f"binwalk_{path.stem}_{os.getpid()}")
-    cmd = ["binwalk", "--run-as=root", "-e", "-M", "-C", str(out_dir), str(path)] if extract else ["binwalk", str(path)]
+    cmd = ["binwalk", "-e", "-M", "-C", str(out_dir), str(path)] if extract else ["binwalk", str(path)]
     ret, stdout, stderr = _safe_run_command(cmd)
 
     output = [f"=== BINWALK SCAN REPORT: {path.name} ===", stdout if stdout else (stderr or "No signatures identified.")]
@@ -486,7 +543,7 @@ def solve_png_ihdr(file_path: str, output_path: str = "") -> str:
     new_w, new_h = found
     data[16:24] = struct.pack(">II", new_w, new_h)
 
-    out_file = Path(output_path) if output_path else (_ensure_dir("fixed_png") / f"{path.stem}_repaired.png")
+    out_file = _validate_output_path(output_path, _ensure_dir("fixed_png"), f"{path.stem}_repaired.png")
     out_file.write_bytes(data)
 
     return (
@@ -509,7 +566,7 @@ def extract_bitplanes(file_path: str, output_dir: str = "") -> str:
     except Exception as e:
         return f"[StegoKiller Error]: Image open failed: {e}"
 
-    out_path = Path(output_dir) if output_dir else _ensure_dir(f"bitplanes_{path.stem}_{os.getpid()}")
+    out_path = _validate_output_path(output_dir, _ensure_dir(f"bitplanes_{path.stem}_{os.getpid()}"))
     img_mode = "RGBA" if img.mode == "RGBA" else "RGB"
     img = img.convert(img_mode)
     arr = np.array(img)
@@ -2218,68 +2275,92 @@ def steghide_dictionary_attack(file_path: str, wordlist_path: str = "", common_o
 
 @mcp.tool()
 def multi_tool_lsb_scan(file_path: str) -> str:
-    """Run ALL available LSB extraction tools (zsteg, stegpy, openstego, stegolsb) in parallel and consolidate results with automatic flag detection."""
+    """Run ALL available LSB extraction tools (zsteg, stegpy, openstego, manual LSB) in parallel using ThreadPoolExecutor and consolidate results with automatic flag detection."""
     path = _sanitize_path(file_path)
     if not path.is_file():
         return f"[StegoKiller Error]: File not found: {file_path}"
     flag_re = re.compile(FLAG_REGEX_DEFAULT)
     results = []
 
-    # zsteg
-    ret, stdout, stderr = _safe_run_command(["zsteg", str(path)], timeout=30)
-    if ret == 0 and stdout:
-        for line in stdout.splitlines():
-            if flag_re.search(line):
-                results.append(f"[FLAG via zsteg]: {line.strip()}")
-            elif 'text:' in line.lower() or 'file:' in line.lower():
-                results.append(f"[zsteg] {line.strip()}")
+    def _task_zsteg():
+        res = []
+        ret, stdout, _ = _safe_run_command(["zsteg", str(path)], timeout=30)
+        if ret == 0 and stdout:
+            for line in stdout.splitlines():
+                if flag_re.search(line):
+                    res.append(f"[FLAG via zsteg]: {line.strip()}")
+                elif 'text:' in line.lower() or 'file:' in line.lower():
+                    res.append(f"[zsteg] {line.strip()}")
+        return res
 
-    # stegpy
-    ret2, stdout2, stderr2 = _safe_run_command(["stegpy", str(path)], timeout=15)
-    if ret2 == 0 and stdout2:
-        if flag_re.search(stdout2):
-            results.append(f"[FLAG via stegpy]: {stdout2.strip()[:500]}")
-        elif len(stdout2.strip()) > 3:
-            results.append(f"[stegpy] {stdout2.strip()[:500]}")
+    def _task_stegpy():
+        res = []
+        ret, stdout, _ = _safe_run_command(["stegpy", str(path)], timeout=15)
+        if ret == 0 and stdout:
+            if flag_re.search(stdout):
+                res.append(f"[FLAG via stegpy]: {stdout.strip()[:500]}")
+            elif len(stdout.strip()) > 3:
+                res.append(f"[stegpy] {stdout.strip()[:500]}")
+        return res
 
-    # openstego
-    ret3, stdout3, stderr3 = _safe_run_command(["openstego", "extract", "-sf", str(path), "-xf", "/tmp/stego_mcp_output/openstego_out"], timeout=15)
-    if ret3 == 0:
+    def _task_openstego():
+        res = []
+        out_f = _ensure_dir("openstego_out") / f"openstego_{os.getpid()}.txt"
+        ret, _, _ = _safe_run_command(["openstego", "extract", "-sf", str(path), "-xf", str(out_f)], timeout=15)
+        if ret == 0 and out_f.exists():
+            try:
+                ext = out_f.read_text(errors='ignore')[:500]
+                if ext.strip():
+                    if flag_re.search(ext):
+                        res.append(f"[FLAG via openstego]: {ext.strip()}")
+                    else:
+                        res.append(f"[openstego] {ext.strip()}")
+            except Exception as e:
+                logger.debug(f"OpenStego read error: {e}")
+        return res
+
+    def _task_manual_lsb():
+        res = []
         try:
-            ext = Path("/tmp/stego_mcp_output/openstego_out").read_text(errors='ignore')[:500]
-            if ext.strip():
-                if flag_re.search(ext):
-                    results.append(f"[FLAG via openstego]: {ext.strip()}")
-                else:
-                    results.append(f"[openstego] {ext.strip()}")
-        except Exception:
-            pass
+            im = Image.open(str(path))
+            arr = np.array(im)
+            if arr.ndim >= 3 and arr.shape[2] >= 3:
+                bits = []
+                for y in range(arr.shape[0]):
+                    for x in range(arr.shape[1]):
+                        for c in range(min(3, arr.shape[2])):
+                            bits.append(arr[y, x, c] & 1)
+                raw = bytearray()
+                for i in range(0, len(bits) - 7, 8):
+                    byte_val = 0
+                    for j in range(8):
+                        byte_val = (byte_val << 1) | bits[i + j]
+                    raw.append(byte_val)
+                    if byte_val == 0:
+                        break
+                text = raw.decode('latin-1', errors='replace')
+                if flag_re.search(text):
+                    res.append(f"[FLAG via manual LSB RGB]: {text[:500]}")
+                elif sum(c.isprintable() for c in text[:100]) > 50:
+                    res.append(f"[Manual LSB RGB] {text[:300]}")
+        except Exception as e:
+            logger.debug(f"Manual LSB error: {e}")
+        return res
 
-    # Manual LSB extraction
-    try:
-        im = Image.open(str(path))
-        arr = np.array(im)
-        if arr.ndim >= 3 and arr.shape[2] >= 3:
-            bits = []
-            for y in range(arr.shape[0]):
-                for x in range(arr.shape[1]):
-                    for c in range(min(3, arr.shape[2])):
-                        bits.append(arr[y, x, c] & 1)
-            raw = bytearray()
-            for i in range(0, len(bits) - 7, 8):
-                byte_val = 0
-                for j in range(8):
-                    byte_val = (byte_val << 1) | bits[i + j]
-                raw.append(byte_val)
-                if byte_val == 0:
-                    break
-            text = raw.decode('latin-1', errors='replace')
-            if flag_re.search(text):
-                results.append(f"[FLAG via manual LSB RGB]: {text[:500]}")
-            elif sum(c.isprintable() for c in text[:100]) > 50:
-                results.append(f"[Manual LSB RGB] {text[:300]}")
-    except Exception:
-        pass
+    # Run tasks concurrently in ThreadPoolExecutor
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [
+            executor.submit(_task_zsteg),
+            executor.submit(_task_stegpy),
+            executor.submit(_task_openstego),
+            executor.submit(_task_manual_lsb),
+        ]
+        for f in concurrent.futures.as_completed(futures):
+            try:
+                hits = f.result()
+                results.extend(hits)
+            except Exception as e:
+                logger.debug(f"LSB subtask error: {e}")
 
     if not results:
         return f"=== MULTI-TOOL LSB SCAN: {path.name} ===\nNo LSB data or flags detected by any tool."
@@ -2798,7 +2879,7 @@ def recursive_archive_unpacker(archive_path: str, max_depth: int = 15) -> str:
             try:
                 with zipfile.ZipFile(str(curr_target), 'r') as z:
                     names = z.namelist()
-                    z.extractall(str(out_base))
+                    _safe_extract_zip(z, out_base)
                     history.append(f"Level {depth}: ZIP Archive -> Extracted {len(names)} files ({names[:2]})")
                     for n in names:
                         cand = out_base / n
@@ -2833,7 +2914,7 @@ def recursive_archive_unpacker(archive_path: str, max_depth: int = 15) -> str:
             try:
                 with tarfile.open(str(curr_target), 'r:*') as t:
                     names = t.getnames()
-                    t.extractall(str(out_base))
+                    _safe_extract_tar(t, out_base)
                     history.append(f"Level {depth}: TAR Archive -> Extracted {names[:2]}")
                     for n in names:
                         cand = out_base / n
@@ -3104,8 +3185,17 @@ def carve_memory_dump_secrets(dump_path: str) -> str:
     if b"CLIENT_RANDOM" in data or b"RSA Session-ID" in data:
         findings.append("[!] SSL/TLS Master Key Log strings identified!")
 
-    if b"-----BEGIN RSA PRIVATE KEY-----" in data or b"-----BEGIN OPENSSH PRIVATE KEY-----" in data:
-        findings.append("[!] Unencrypted OpenSSH/RSA Private Key block carved from RAM!")
+    key_markers = [
+        (b"-----BEGIN OPENSSH PRIVATE KEY-----", "OpenSSH Private Key"),
+        (b"-----BEGIN RSA PRIVATE KEY-----", "RSA Private Key"),
+        (b"-----BEGIN EC PRIVATE KEY-----", "EC Private Key"),
+        (b"-----BEGIN PRIVATE KEY-----", "PKCS#8 Private Key"),
+        (b"-----BEGIN PGP PRIVATE KEY BLOCK-----", "PGP Private Key Block"),
+        (b"-----BEGIN CERTIFICATE-----", "X.509 Certificate"),
+    ]
+    for marker, label in key_markers:
+        if marker in data:
+            findings.append(f"[!] Unencrypted {label} block carved from RAM!")
 
     env_matches = re.findall(rb"[A-Z0-9_]+=[a-zA-Z0-9_./\-]{8,}", data)
     if env_matches:

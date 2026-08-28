@@ -1,5 +1,5 @@
 # ==============================================================================
-# StegoKiller MCP Suite - Production Docker Container
+# StegoKiller MCP Suite - Production Hardened Docker Container
 # Author: Knight_S
 # Version: 4.0.0 (70 Specialized Tools)
 # ==============================================================================
@@ -9,7 +9,7 @@ FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
+    PATH="/home/stego/go/bin:/usr/local/go/bin:${PATH}"
 
 # Install core system packages & forensic utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -60,6 +60,12 @@ RUN ARCH=$(dpkg --print-architecture) && \
     (dpkg -i /tmp/stegseek.deb || apt-get install -f -y) && \
     rm -f /tmp/stegseek.deb
 
+# Create unprivileged runtime user for container isolation
+RUN useradd -m -u 1000 -s /bin/bash stego && \
+    mkdir -p /tmp/stego_mcp_output && \
+    chown -R stego:stego /tmp/stego_mcp_output && \
+    chmod 700 /tmp/stego_mcp_output
+
 # Setup Workspace
 WORKDIR /app
 
@@ -67,11 +73,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
-# Copy server code
+# Copy server code and set ownership
 COPY . .
+RUN chown -R stego:stego /app
 
-# Setup temporary staging directory
-RUN mkdir -p /tmp/stego_mcp_output && chmod 777 /tmp/stego_mcp_output
+# Switch to non-root user
+USER stego
 
 # Entrypoint for MCP stdio client
 ENTRYPOINT ["python3", "server.py"]

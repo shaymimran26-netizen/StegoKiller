@@ -18,7 +18,7 @@ from scipy.io import wavfile
 from pathlib import Path
 
 # Add server directory
-sys.path.insert(0, "/home/shaym/StegoKiller")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from server import (
     solve_png_ihdr,

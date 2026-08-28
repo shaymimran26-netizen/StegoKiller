@@ -25,7 +25,7 @@ from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 
 def build_tool_manifest():
-    """Extract standard JSON schemas for all 44 registered tools."""
+    """Extract standard JSON schemas for all 70 registered tools."""
     tool_list = []
     try:
         raw_tools = mcp._tool_manager.list_tools()
@@ -44,16 +44,16 @@ def build_tool_manifest():
 SERVER_CARD_PAYLOAD = {
     "serverInfo": {
         "name": "stegokiller",
-        "version": "3.0.0"
+        "version": "4.0.0"
     },
-    "description": "StegoKiller Ultra Suite by Knight_S - Ultimate Steganography & Digital Forensics Suite (44+ Tools)",
+    "description": "StegoKiller Ultra Suite by Knight_S - Ultimate Steganography & Digital Forensics Suite (70 Specialized Tools)",
     "connection": {
         "type": "sse",
-        "url": "https://stegokiller.onrender.com/sse"
+        "url": os.environ.get("STEGOKILLER_PUBLIC_URL", "https://stegokiller.onrender.com/sse")
     },
     "transport": {
         "type": "sse",
-        "url": "https://stegokiller.onrender.com/sse"
+        "url": os.environ.get("STEGOKILLER_PUBLIC_URL", "https://stegokiller.onrender.com/sse")
     },
     "configSchema": {
         "type": "object",
@@ -84,7 +84,7 @@ async def health(request):
             "tools": len(SERVER_CARD_PAYLOAD["tools"]),
             "connection": {
                 "type": "sse",
-                "url": "https://stegokiller.onrender.com/sse"
+                "url": os.environ.get("STEGOKILLER_PUBLIC_URL", "https://stegokiller.onrender.com/sse")
             },
             "endpoints": {
                 "sse": "/sse",
@@ -100,17 +100,20 @@ async def index(request):
     docs_html = Path(__file__).parent / "docs" / "index.html"
     if docs_html.exists():
         return HTMLResponse(docs_html.read_text(encoding="utf-8"))
-    return HTMLResponse("<h1>StegoKiller MCP Server is Online</h1><p>44 Tools Available at /sse</p>")
+    return HTMLResponse("<h1>StegoKiller MCP Server is Online</h1><p>70 Tools Available at /sse</p>")
 
 # Initialize Starlette FastMCP SSE App
 app = mcp.sse_app()
 
 # Add CORS Middleware
+allowed_origins_env = os.environ.get("STEGOKILLER_ALLOWED_ORIGINS", "*")
+allowed_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=allowed_origins if allowed_origins else ["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -122,5 +125,5 @@ app.routes.insert(3, Route("/", index))
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
-    print(f"[StegoKiller] Starting Remote FastMCP SSE Server on port {port} (44 Tools Registered)...")
+    print(f"[StegoKiller] Starting Remote FastMCP SSE Server on port {port} (70 Tools Registered)...")
     uvicorn.run(app, host="0.0.0.0", port=port)
