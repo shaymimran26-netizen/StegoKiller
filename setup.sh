@@ -97,6 +97,6 @@ mkdir -p /tmp/stego_mcp_output
 chmod 777 /tmp/stego_mcp_output
 
 echo "================================================================================"
-echo "  StegoKiller Ultra Suite Setup Complete! (44 Specialized Tools Ready)"
+echo "  StegoKiller Ultra Suite Setup Complete! (70 Specialized Tools Ready)"
 echo "  Launch: python3 $SCRIPT_DIR/server.py"
 echo "================================================================================"

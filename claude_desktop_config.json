@@ -3,11 +3,10 @@
     "stegokiller": {
       "command": "python3",
       "args": [
-        "/home/shaym/StegoKiller/server.py"
+        "/path/to/StegoKiller/server.py"
       ],
       "env": {
-        "PYTHONUNBUFFERED": "1",
-        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/go/bin"
+        "PYTHONUNBUFFERED": "1"
       }
     }
   }
