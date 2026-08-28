@@ -1967,9 +1967,12 @@ def xor_bruteforce(file_path: str, max_key_len: int = 8) -> str:
     data = path.read_bytes()[:8192]
     if not data:
         return "File is empty."
-    flag_re = re.compile(FLAG_REGEX_DEFAULT)
+    
+    # Strict CTF Flag Regex (Only printable ASCII inside flag braces, no binary garbage)
+    strict_flag_re = re.compile(r'(?i)(?:flag|ctf|picoctf|htb|thm|sec|cyber)\{[A-Za-z0-9_!@#$%^&*()-+=<>?,./:;~]{4,100}\}')
     flag_results = []
     text_results = []
+    seen_flags = set()
 
     # 1. Single-byte XOR (1..255)
     for k in range(1, 256):
@@ -1979,42 +1982,47 @@ def xor_bruteforce(file_path: str, max_key_len: int = 8) -> str:
         except UnicodeDecodeError:
             text = xored.decode("latin-1")
         printable_ratio = sum(c.isprintable() or c in '\n\r\t' for c in text) / len(text)
-        flag_match = flag_re.search(text)
-        if flag_match:
-            flag_results.append(f"[FLAG FOUND!] Single-Byte XOR Key=0x{k:02X}: {flag_match.group()}\n  Full text: {text[:300]}")
-        elif printable_ratio > 0.85:
-            text_results.append((printable_ratio, f"[HIGH CONFIDENCE] Single-Byte XOR Key=0x{k:02X} ({printable_ratio:.0%} printable): {text[:200]}"))
+        flag_match = strict_flag_re.search(text)
+        if flag_match and flag_match.group() not in seen_flags:
+            seen_flags.add(flag_match.group())
+            flag_results.append(f"[FLAG FOUND!] Single-Byte XOR Key=0x{k:02X}: {flag_match.group()}\n  Full text: {text[:250]}")
+        elif printable_ratio > 0.88:
+            text_results.append((printable_ratio, f"[HIGH CONFIDENCE] Single-Byte XOR Key=0x{k:02X} ({printable_ratio:.0%} printable): {text[:180]}"))
 
-    # 2. Multi-byte Repeating Key Crib Search
+    # 2. Multi-byte Repeating Key Crib Search with Strict Content Verification
     cribs = [b"flag{", b"CTF{", b"picoCTF{", b"HTB{", b"THM{", b"sec{", b"cyber{", b"\x89PNG", b"PK\x03\x04", b"%PDF"]
     for crib in cribs:
-        for offset in range(0, min(len(data) - len(crib), 512)):
+        for offset in range(0, min(len(data) - len(crib), 256)):
             window = data[offset:offset+len(crib)]
             derived_key = bytes([w ^ c for w, c in zip(window, crib)])
-            # Try repeating key of derived length (up to max_key_len)
             for klen in range(len(derived_key), max_key_len + 1):
                 key_candidate = derived_key[:klen]
                 if len(key_candidate) < 2:
                     continue
-                # Apply repeating key XOR
-                full_xored = bytes([data[i] ^ key_candidate[i % len(key_candidate)] for i in range(len(data))])
+                # Test repeated decryption of data chunk
+                test_len = min(len(data), offset + 300)
+                full_xored = bytes([data[i] ^ key_candidate[(i - offset) % len(key_candidate)] for i in range(offset, test_len)])
                 try:
-                    full_text = full_xored.decode("utf-8", errors="ignore")
-                    m = flag_re.search(full_text)
-                    if m and m.group() not in [r for r in flag_results]:
-                        flag_results.append(f"[FLAG FOUND!] Multi-Byte XOR Key='{key_candidate.decode(errors='ignore')}' (Hex: {key_candidate.hex()}): {m.group()}\n  Text Preview: {full_text[:300]}")
+                    dec_text = full_xored.decode("ascii", errors="strict")
+                    m = strict_flag_re.search(dec_text)
+                    if m and m.group() not in seen_flags:
+                        # Extra validation: flag contents must be cleanly printable
+                        flag_val = m.group()
+                        if all(32 <= ord(c) < 127 for c in flag_val):
+                            seen_flags.add(flag_val)
+                            flag_results.append(f"[FLAG FOUND!] Multi-Byte XOR Key='{key_candidate.decode(errors='ignore')}' (Hex: {key_candidate.hex()}): {flag_val}\n  Text Preview: {dec_text[:200]}")
                 except Exception:
                     pass
 
     text_results.sort(key=lambda x: x[0], reverse=True)
-    all_results = flag_results + [r[1] for r in text_results[:15]]
+    all_results = flag_results + [r[1] for r in text_results[:10]]
 
     if not all_results:
         return f"=== XOR BRUTE-FORCE REPORT ===\nNo XOR key produced readable text or flag matches on {path.name} ({len(data)} bytes tested)."
     return (
         f"=== ULTRA-DEEP XOR BRUTE-FORCE REPORT: {path.name} ===\n"
         f"Tested {len(data)} bytes with 255 single-byte keys + Multi-byte Crib Search\n"
-        + "\n".join(all_results[:30])
+        + "\n".join(all_results[:20])
     )
 
 
@@ -2542,6 +2550,7 @@ def full_auto_solve(file_path: str) -> str:
         return f"[StegoKiller Error]: File not found: {file_path}"
 
     flag_re = re.compile(FLAG_REGEX_DEFAULT)
+    strict_flag_re = re.compile(r'(?i)(?:flag|ctf|picoctf|htb|thm|sec|cyber)\{[A-Za-z0-9_!@#$%^&*()-+=<>?,./:;~]{4,100}\}')
     all_flags = []
     carved_artifacts = []
     report_sections = []
@@ -2551,14 +2560,21 @@ def full_auto_solve(file_path: str) -> str:
 
     def _add(title, content):
         report_sections.append(f"\n{'='*70}\n[{title}]\n{'='*70}\n{content}")
-        for m in flag_re.finditer(content):
+        for m in strict_flag_re.finditer(content):
             hit = m.group()
-            if hit not in all_flags:
+            # Validate that hit has clean printable ASCII
+            if all(32 <= ord(c) < 127 for c in hit) and hit not in all_flags:
                 all_flags.append(hit)
 
     # ── STAGE 1: File Structure & Overlay Carving ──
     struct_res = inspect_file_structure(str(path))
     _add("STAGE 1: FILE STRUCTURE & INTEGRITY", struct_res)
+
+    # Extract detected signature from Stage 1 report
+    detected_signature = ""
+    for line in struct_res.splitlines():
+        if "Detected Signature  :" in line:
+            detected_signature = line.split(":", 1)[1].strip()
 
     # If overlay was carved, deeply analyze the overlay!
     if "Carved Overlay Path :" in struct_res:
@@ -2598,14 +2614,22 @@ def full_auto_solve(file_path: str) -> str:
                     for carved_f in list(carved_dir.rglob("*"))[:15]:
                         if carved_f.is_file() and carved_f.stat().st_size > 0:
                             carved_artifacts.append(str(carved_f))
-                            # Quick scan carved file
                             sub_grep = grep_flag_patterns(str(carved_f))
-                            if "Flag Matches" in sub_grep or flag_re.search(sub_grep):
+                            if "Flag Matches" in sub_grep or strict_flag_re.search(sub_grep):
                                 _add(f"STAGE 5b: CARVED ARTIFACT SCAN ({carved_f.name})", sub_grep)
 
-    # ── STAGE 6: Format-Specific Deep Analysis ──
-    if ext in ('.png', '.bmp', '.gif', '.apng'):
-        if ext == '.png':
+    # ── STAGE 6: Signature-Aware & Extension-Aware Format Deep Analysis ──
+    is_png = ext in ('.png', '.bmp', '.gif', '.apng') or "PNG" in detected_signature
+    is_jpeg = (ext in ('.jpg', '.jpeg') or "JPEG" in detected_signature) and not is_png
+    is_audio = ext in ('.wav', '.mp3', '.ogg', '.flac') or "Audio" in detected_signature or "RIFF" in detected_signature
+    is_pdf = ext in ('.pdf',) or "PDF" in detected_signature
+    is_docx = ext in ('.docx', '.xlsx', '.pptx')
+    is_doc = ext in ('.doc', '.xls', '.ppt')
+    is_archive = ext in ('.zip', '.tar', '.gz', '.7z', '.rar', '.bz2', '.xz') or "ZIP" in detected_signature or "7-Zip" in detected_signature
+    is_pcap = ext in ('.pcap', '.pcapng', '.cap') or "PCAP" in detected_signature
+
+    if is_png:
+        if ext == '.png' or "PNG" in detected_signature:
             _add("STAGE 6a: PNG CHUNKS", analyze_png_chunks(str(path)))
             _add("STAGE 6b: PNG IHDR CRC32 CHECK", solve_png_ihdr(str(path)))
             _add("STAGE 6c: PNG FILTER BYTES", png_filter_byte_analysis(str(path)))
@@ -2623,7 +2647,7 @@ def full_auto_solve(file_path: str) -> str:
         _add("STAGE 15: 2D FFT FREQUENCY ANALYSIS", fft_frequency_analysis(str(path)))
         _add("STAGE 16: QR CODE DETECTION", repair_and_read_qr(str(path)))
 
-    elif ext in ('.jpg', '.jpeg'):
+    elif is_jpeg:
         _add("STAGE 6: JPEG QUANTIZATION", analyze_jpeg_quantization_tables(str(path)))
         _add("STAGE 7: JPEG GHOSTS", detect_jpeg_ghosts(str(path)))
         _add("STAGE 8: STEGHIDE DICTIONARY ATTACK", steghide_dictionary_attack(str(path)))
@@ -2632,31 +2656,31 @@ def full_auto_solve(file_path: str) -> str:
         _add("STAGE 11: OUTGUESS EXTRACTION", run_outguess(str(path)))
         _add("STAGE 12: QR CODE DETECTION", repair_and_read_qr(str(path)))
 
-    elif ext in ('.wav', '.mp3', '.ogg', '.flac'):
+    elif is_audio:
         _add("STAGE 6: SPECTROGRAM", generate_audio_spectrogram(str(path)))
         _add("STAGE 7: MORSE DECODE", decode_audio_morse(str(path)))
         _add("STAGE 8: DTMF TONES", decode_dtmf_tones(str(path)))
         _add("STAGE 9: AUDIO LSB", audio_lsb_extract(str(path)))
         _add("STAGE 10: AUDIO PHASE DIFF", audio_channel_phase_diff(str(path)))
         _add("STAGE 11: DEEPSOUND", extract_deepsound(str(path)))
-        if ext == '.mp3':
+        if ext == '.mp3' or "MP3" in detected_signature:
             _add("STAGE 12: MP3STEGO", run_mp3stego(str(path)))
 
-    elif ext in ('.pdf',):
+    elif is_pdf:
         _add("STAGE 6: PDF STEGO", inspect_pdf_stego(str(path)))
         _add("STAGE 7: PDF LAYERS & JS", inspect_pdf_layers_and_js(str(path)))
 
-    elif ext in ('.docx', '.xlsx', '.pptx'):
+    elif is_docx:
         _add("STAGE 6: OFFICE XML", inspect_office_xml(str(path)))
 
-    elif ext in ('.doc', '.xls', '.ppt'):
+    elif is_doc:
         _add("STAGE 6: OLE VBA MACROS", inspect_ole_vba_macros(str(path)))
 
-    elif ext in ('.zip', '.tar', '.gz', '.7z', '.rar', '.bz2', '.xz'):
+    elif is_archive:
         _add("STAGE 6: RECURSIVE ARCHIVE UNPACK", recursive_archive_unpacker(str(path)))
         _add("STAGE 7: ARCHIVE METADATA COVERT", extract_archive_metadata_covert(str(path)))
 
-    elif ext in ('.pcap', '.pcapng', '.cap'):
+    elif is_pcap:
         _add("STAGE 6: PCAP COVERT CHANNELS", extract_pcap_covert_channels(str(path)))
         _add("STAGE 7: NETWORK TUNNELING", detect_network_tunneling(str(path)))
         _add("STAGE 8: COVERT HTTP HEADERS", detect_covert_http_headers(str(path)))
@@ -2665,7 +2689,16 @@ def full_auto_solve(file_path: str) -> str:
     _add("STAGE FINAL-1: ULTRA-DEEP XOR BRUTE FORCE", xor_bruteforce(str(path)))
 
     # ── STAGE: Foremost Carving ──
-    _add("STAGE FINAL-2: FOREMOST FILE CARVING", carve_foremost(str(path)))
+    foremost_res = carve_foremost(str(path))
+    _add("STAGE FINAL-2: FOREMOST FILE CARVING", foremost_res)
+    if "Directory:" in foremost_res:
+        for line in foremost_res.splitlines():
+            if "Directory:" in line:
+                f_dir = Path(line.split(":", 1)[1].strip())
+                if f_dir.is_dir():
+                    for f_f in list(f_dir.rglob("*"))[:15]:
+                        if f_f.is_file() and f_f.stat().st_size > 0 and str(f_f) not in carved_artifacts:
+                            carved_artifacts.append(str(f_f))
 
     elapsed = time.time() - start_time
 
@@ -2678,7 +2711,7 @@ def full_auto_solve(file_path: str) -> str:
         "     ╚════██║   ██║   ██╔══╝  ██║   ██║██║   ██║██╔═██╗ ██║██║     ██║     ██╔══╝  ██╔══██╗\n"
         "     ███████║   ██║   ███████╗╚██████╔╝╚██████╔╝██║  ██╗██║███████╗███████╗███████╗██║  ██║\n"
         "     ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝\n"
-        f"              FULL AUTO-SOLVE REPORT (AUTONOMOUS V4.5 ENGINE) by Knight_S (Time: {elapsed:.2f}s)\n"
+        f"        FULL AUTO-SOLVE REPORT (AUTONOMOUS V4.5 ENGINE) by Knight_S (Time: {elapsed:.2f}s)\n"
         + "#" * 78 + "\n"
     )
 
