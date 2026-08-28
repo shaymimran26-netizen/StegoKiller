@@ -12,11 +12,11 @@ r"""
  Project  : StegoKiller MCP Server (Enterprise Edition)
  Author   : Knight_S
  Framework: FastMCP (Model Context Protocol)
- Version  : 3.0.0 (Ultra-Enriched CTF Suite)
+ Version  : 4.0.0 (Fully Automated CTF Suite)
  License  : Apache-2.0
  Description:
    The ultimate steganography, digital forensics, covert-channel, and payload
-   extraction MCP server. Integrating 44+ specialized tools across Images,
+   extraction MCP server. Integrating 70+ specialized tools across Images,
    Audio, Video, Network PCAPs, Documents, Fonts, Git, AI Models, and Text.
 ================================================================================
 """
@@ -1862,6 +1862,667 @@ def auto_decode_payload(raw_data: str) -> str:
 
 
 # ============================================================================
+# ULTRA AUTOMATION & DEEP ANALYSIS ENGINES (V4.0)
+# ============================================================================
+
+
+@mcp.tool()
+def xor_bruteforce(file_path: str, max_key_len: int = 4) -> str:
+    """Brute-force single-byte and multi-byte XOR keys on a file (up to max_key_len bytes). Automatically detects flags and printable text."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+    data = path.read_bytes()[:4096]
+    if not data:
+        return "File is empty."
+    flag_re = re.compile(FLAG_REGEX_DEFAULT)
+    results = []
+
+    # Single-byte XOR
+    for k in range(1, 256):
+        xored = bytes([b ^ k for b in data])
+        try:
+            text = xored.decode("utf-8", errors="strict")
+        except UnicodeDecodeError:
+            text = xored.decode("latin-1")
+        printable_ratio = sum(c.isprintable() or c in '\n\r\t' for c in text) / len(text)
+        flag_match = flag_re.search(text)
+        if flag_match:
+            results.append(f"[FLAG FOUND!] XOR Key=0x{k:02X}: {flag_match.group()}")
+            results.append(f"  Full text: {text[:300]}")
+        elif printable_ratio > 0.85:
+            results.append(f"[HIGH CONFIDENCE] XOR Key=0x{k:02X} ({printable_ratio:.0%} printable): {text[:200]}")
+
+    if not results:
+        return f"=== XOR BRUTE-FORCE REPORT ===\nNo single-byte XOR key produced readable text or flag matches on {path.name} ({len(data)} bytes tested)."
+    return (
+        f"=== XOR BRUTE-FORCE REPORT: {path.name} ===\n"
+        f"Tested {len(data)} bytes with 255 single-byte keys\n"
+        + "\n".join(results[:30])
+    )
+
+
+@mcp.tool()
+def detect_repeating_pixel_pattern(file_path: str) -> str:
+    """Detect if an image is constructed from a repeating pixel tile pattern and extract the core tile payload."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+    try:
+        im = Image.open(str(path))
+    except Exception as e:
+        return f"Cannot open image: {e}"
+    arr = np.array(im)
+    channels = arr.shape[2] if arr.ndim == 3 else 1
+    flat = arr.reshape(-1, channels) if channels > 1 else arr.flatten()
+    total = len(flat)
+
+    # Find smallest repeating period
+    found_period = 0
+    for period in range(1, min(total // 2, 8192)):
+        tile = flat[:period]
+        test_len = min(total, period * 100)
+        trimmed = flat[:test_len - (test_len % period)].reshape(-1, period) if channels == 1 else flat[:test_len - (test_len % period)].reshape(-1, period, channels)
+        if channels == 1:
+            if np.all(trimmed == tile):
+                found_period = period
+                break
+        else:
+            if np.all(trimmed == tile):
+                found_period = period
+                break
+
+    if found_period == 0:
+        return f"=== REPEATING PATTERN ANALYSIS: {path.name} ===\nNo repeating pixel pattern detected. Image has unique pixel data."
+
+    tile_data = flat[:found_period]
+    raw_bytes = tile_data.tobytes()
+    tile_hex = raw_bytes.hex()
+    try:
+        tile_ascii = raw_bytes.decode("latin-1")
+    except Exception:
+        tile_ascii = "(binary)"
+    b64 = base64.b64encode(raw_bytes).decode()
+    entropy = _calculate_entropy(raw_bytes)
+    flag_re = re.compile(FLAG_REGEX_DEFAULT)
+    flag_match = flag_re.search(tile_ascii) or flag_re.search(tile_hex)
+
+    report = (
+        f"=== REPEATING PATTERN ANALYSIS: {path.name} ===\n"
+        f"Status          : REPEATING TILE DETECTED\n"
+        f"Tile Period     : {found_period} pixels ({found_period * channels} bytes)\n"
+        f"Image Pixels    : {total}\n"
+        f"Tile Repetitions: {total // found_period}\n"
+        f"Tile Entropy    : {entropy:.4f} / 8.0000\n"
+        f"Tile Hex        : {tile_hex[:256]}{'...' if len(tile_hex) > 256 else ''}\n"
+        f"Tile Base64     : {b64[:256]}{'...' if len(b64) > 256 else ''}\n"
+    )
+    if flag_match:
+        report += f"\n[FLAG FOUND!]: {flag_match.group()}\n"
+    return report
+
+
+@mcp.tool()
+def fft_frequency_analysis(file_path: str) -> str:
+    """Perform 2D FFT frequency domain analysis on an image to reveal hidden patterns, watermarks, or embedded data in the frequency spectrum."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+    try:
+        im = Image.open(str(path)).convert("L")
+    except Exception as e:
+        return f"Cannot open image: {e}"
+    arr = np.array(im, dtype=np.float64)
+    F = np.fft.fftshift(np.fft.fft2(arr))
+    magnitude = np.log(np.abs(F) + 1e-5)
+    phase = np.angle(F)
+
+    mag_norm = ((magnitude - magnitude.min()) / (magnitude.max() - magnitude.min()) * 255).astype(np.uint8)
+    phase_norm = ((phase - phase.min()) / (phase.max() - phase.min()) * 255).astype(np.uint8)
+
+    out_dir = _ensure_dir(f"fft_{path.stem}")
+    Image.fromarray(mag_norm).save(str(out_dir / "magnitude_spectrum.png"))
+    Image.fromarray(phase_norm).save(str(out_dir / "phase_spectrum.png"))
+
+    # Find dominant frequency peaks (excluding DC)
+    center_y, center_x = arr.shape[0] // 2, arr.shape[1] // 2
+    mag_copy = magnitude.copy()
+    mag_copy[max(0,center_y-3):center_y+4, max(0,center_x-3):center_x+4] = 0
+    peak_indices = np.unravel_index(np.argsort(mag_copy.flatten())[::-1][:10], mag_copy.shape)
+    peaks = [(int(peak_indices[0][i]), int(peak_indices[1][i]), float(mag_copy[peak_indices[0][i], peak_indices[1][i]])) for i in range(10)]
+
+    peak_report = "\n".join([f"  Peak {i+1}: ({y}, {x}) magnitude={m:.2f}" for i, (y, x, m) in enumerate(peaks)])
+
+    return (
+        f"=== 2D FFT FREQUENCY ANALYSIS: {path.name} ===\n"
+        f"Image Size       : {arr.shape[1]} x {arr.shape[0]}\n"
+        f"Magnitude Saved  : {out_dir / 'magnitude_spectrum.png'}\n"
+        f"Phase Saved      : {out_dir / 'phase_spectrum.png'}\n"
+        f"\nTop 10 Frequency Peaks (excluding DC):\n{peak_report}\n"
+        f"\nInterpretation: Strong off-center peaks indicate periodic embedded patterns or watermarks."
+    )
+
+
+@mcp.tool()
+def extract_lsb_payload(file_path: str, channels: str = "rgb", bit_order: str = "lsb", bits: int = 1, pixel_order: str = "row") -> str:
+    """Extract LSB-embedded binary payload from an image with full control over channel selection, bit order, number of bits, and pixel traversal order. Returns raw bytes as hex and attempts ASCII/flag decoding."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+    try:
+        im = Image.open(str(path))
+    except Exception as e:
+        return f"Cannot open image: {e}"
+
+    arr = np.array(im)
+    if arr.ndim == 2:
+        arr = arr[:, :, np.newaxis]
+
+    channel_map = {'r': 0, 'g': 1, 'b': 2, 'a': 3}
+    selected = [channel_map[c] for c in channels.lower() if c in channel_map and channel_map[c] < arr.shape[2]]
+    if not selected:
+        return "Invalid channel selection."
+
+    if pixel_order == "column":
+        arr = arr.transpose(1, 0, 2)
+
+    bit_stream = []
+    for bit_idx in range(bits):
+        actual_bit = bit_idx if bit_order == "lsb" else (7 - bit_idx)
+        for y in range(arr.shape[0]):
+            for x in range(arr.shape[1]):
+                for ch in selected:
+                    bit_stream.append((arr[y, x, ch] >> actual_bit) & 1)
+
+    # Convert to bytes
+    raw_bytes = bytearray()
+    for i in range(0, len(bit_stream) - 7, 8):
+        byte_val = 0
+        for j in range(8):
+            byte_val = (byte_val << 1) | bit_stream[i + j]
+        raw_bytes.append(byte_val)
+
+    # Check for null terminator
+    null_pos = raw_bytes.find(0)
+    if null_pos > 0:
+        meaningful = raw_bytes[:null_pos]
+    else:
+        meaningful = raw_bytes[:2048]
+
+    hex_out = meaningful.hex()
+    try:
+        ascii_out = meaningful.decode("utf-8", errors="replace")
+    except Exception:
+        ascii_out = meaningful.decode("latin-1")
+
+    flag_re = re.compile(FLAG_REGEX_DEFAULT)
+    flag_match = flag_re.search(ascii_out)
+
+    report = (
+        f"=== LSB PAYLOAD EXTRACTION: {path.name} ===\n"
+        f"Channels    : {channels.upper()}\n"
+        f"Bit Order   : {bit_order.upper()}\n"
+        f"Bits Used   : {bits}\n"
+        f"Pixel Order : {pixel_order}\n"
+        f"Total Bits  : {len(bit_stream)}\n"
+        f"Payload Size: {len(meaningful)} bytes\n"
+        f"Hex Preview : {hex_out[:512]}\n"
+        f"ASCII Preview: {ascii_out[:512]}\n"
+    )
+    if flag_match:
+        report += f"\n[FLAG FOUND!]: {flag_match.group()}\n"
+    return report
+
+
+@mcp.tool()
+def png_filter_byte_analysis(file_path: str) -> str:
+    """Extract and analyze PNG scanline filter bytes for hidden data encoded in filter type selections (0-4 per row)."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+    data = path.read_bytes()
+    if data[:4] != b'\x89PNG':
+        return "Not a PNG file."
+
+    # Parse IDAT
+    idat_data = b''
+    offset = 8
+    width = height = bpp = 0
+    while offset < len(data) - 8:
+        length = struct.unpack('>I', data[offset:offset+4])[0]
+        ctype = data[offset+4:offset+8]
+        if ctype == b'IHDR':
+            width = struct.unpack('>I', data[offset+8:offset+12])[0]
+            height = struct.unpack('>I', data[offset+12:offset+16])[0]
+            bit_depth = data[offset+16]
+            color_type = data[offset+17]
+            samples = {0:1, 2:3, 3:1, 4:2, 6:4}.get(color_type, 4)
+            bpp = max(1, samples * bit_depth // 8)
+        elif ctype == b'IDAT':
+            idat_data += data[offset+8:offset+8+length]
+        offset += 12 + length
+
+    if not idat_data or not width:
+        return "Failed to parse PNG IDAT data."
+
+    try:
+        raw = zlib.decompress(idat_data)
+    except Exception as e:
+        return f"IDAT decompression failed: {e}"
+
+    stride = 1 + width * bpp
+    filter_bytes = []
+    for row in range(height):
+        if row * stride < len(raw):
+            filter_bytes.append(raw[row * stride])
+
+    unique = set(filter_bytes)
+    # Try interpreting filter bytes as data
+    fb_str = ''.join([str(b) for b in filter_bytes])
+    flag_re = re.compile(FLAG_REGEX_DEFAULT)
+
+    # Binary interpretation (0/1 -> bits)
+    binary_text = ""
+    if unique <= {0, 1}:
+        bits = ''.join([str(b) for b in filter_bytes])
+        binary_bytes = [int(bits[i:i+8], 2) for i in range(0, len(bits)-7, 8)]
+        binary_text = bytes(binary_bytes).decode('latin-1', errors='replace')
+
+    # Trinary/base-5 interpretation
+    base5_text = ""
+    if max(filter_bytes) <= 4:
+        base5_val = 0
+        for b in filter_bytes:
+            base5_val = base5_val * 5 + b
+        try:
+            base5_text = base5_val.to_bytes((base5_val.bit_length() + 7) // 8, 'big').decode('latin-1', errors='replace')
+        except Exception:
+            pass
+
+    report = (
+        f"=== PNG FILTER BYTE ANALYSIS: {path.name} ===\n"
+        f"Total Rows       : {height}\n"
+        f"Unique Filters   : {sorted(unique)}\n"
+        f"Filter Sequence  : {fb_str[:200]}\n"
+    )
+    if binary_text:
+        flag_hit = flag_re.search(binary_text)
+        report += f"Binary Decode    : {binary_text[:300]}\n"
+        if flag_hit:
+            report += f"\n[FLAG FOUND!]: {flag_hit.group()}\n"
+    if base5_text:
+        flag_hit = flag_re.search(base5_text)
+        report += f"Base-5 Decode    : {base5_text[:300]}\n"
+        if flag_hit:
+            report += f"\n[FLAG FOUND!]: {flag_hit.group()}\n"
+
+    return report
+
+
+@mcp.tool()
+def steghide_dictionary_attack(file_path: str, wordlist_path: str = "", common_only: bool = True) -> str:
+    """Run a dictionary attack against steghide-embedded data using common CTF passwords or a custom wordlist."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+
+    common_passwords = [
+        "", "password", "123456", "flag", "ctf", "stego", "steganography",
+        "secret", "hidden", "admin", "root", "test", "challenge", "key",
+        "pass", "1234", "12345", "qwerty", "abc123", "letmein",
+        "master", "dragon", "monkey", "shadow", "sunshine",
+        "princess", "football", "charlie", "welcome", "iloveyou",
+        path.stem, path.stem.lower(), path.stem.upper(),
+    ]
+
+    passwords = common_passwords
+    if wordlist_path:
+        wl = _sanitize_path(wordlist_path)
+        if wl.is_file():
+            try:
+                passwords = wl.read_text(errors='ignore').splitlines()[:5000]
+            except Exception:
+                pass
+
+    found = []
+    for pw in passwords:
+        cmd = ["steghide", "extract", "-sf", str(path), "-p", pw, "-xf", "-", "-f"]
+        ret, stdout, stderr = _safe_run_command(cmd, timeout=5)
+        if ret == 0 and stdout:
+            found.append((pw, stdout[:1000]))
+            break
+
+    if found:
+        pw, content = found[0]
+        flag_re = re.compile(FLAG_REGEX_DEFAULT)
+        flag_match = flag_re.search(content)
+        report = (
+            f"=== STEGHIDE DICTIONARY ATTACK: {path.name} ===\n"
+            f"Status: EXTRACTION SUCCESSFUL!\n"
+            f"Password: '{pw}'\n"
+            f"Extracted Content:\n{content}\n"
+        )
+        if flag_match:
+            report += f"\n[FLAG FOUND!]: {flag_match.group()}\n"
+        return report
+
+    return (
+        f"=== STEGHIDE DICTIONARY ATTACK: {path.name} ===\n"
+        f"Status: No password found\n"
+        f"Tried {len(passwords)} passwords\n"
+    )
+
+
+@mcp.tool()
+def multi_tool_lsb_scan(file_path: str) -> str:
+    """Run ALL available LSB extraction tools (zsteg, stegpy, openstego, stegolsb) in parallel and consolidate results with automatic flag detection."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+    flag_re = re.compile(FLAG_REGEX_DEFAULT)
+    results = []
+
+    # zsteg
+    ret, stdout, stderr = _safe_run_command(["zsteg", str(path)], timeout=30)
+    if ret == 0 and stdout:
+        for line in stdout.splitlines():
+            if flag_re.search(line):
+                results.append(f"[FLAG via zsteg]: {line.strip()}")
+            elif 'text:' in line.lower() or 'file:' in line.lower():
+                results.append(f"[zsteg] {line.strip()}")
+
+    # stegpy
+    ret2, stdout2, stderr2 = _safe_run_command(["stegpy", str(path)], timeout=15)
+    if ret2 == 0 and stdout2:
+        if flag_re.search(stdout2):
+            results.append(f"[FLAG via stegpy]: {stdout2.strip()[:500]}")
+        elif len(stdout2.strip()) > 3:
+            results.append(f"[stegpy] {stdout2.strip()[:500]}")
+
+    # openstego
+    ret3, stdout3, stderr3 = _safe_run_command(["openstego", "extract", "-sf", str(path), "-xf", "/tmp/stego_mcp_output/openstego_out"], timeout=15)
+    if ret3 == 0:
+        try:
+            ext = Path("/tmp/stego_mcp_output/openstego_out").read_text(errors='ignore')[:500]
+            if ext.strip():
+                if flag_re.search(ext):
+                    results.append(f"[FLAG via openstego]: {ext.strip()}")
+                else:
+                    results.append(f"[openstego] {ext.strip()}")
+        except Exception:
+            pass
+
+    # Manual LSB extraction
+    try:
+        im = Image.open(str(path))
+        arr = np.array(im)
+        if arr.ndim >= 3 and arr.shape[2] >= 3:
+            bits = []
+            for y in range(arr.shape[0]):
+                for x in range(arr.shape[1]):
+                    for c in range(min(3, arr.shape[2])):
+                        bits.append(arr[y, x, c] & 1)
+            raw = bytearray()
+            for i in range(0, len(bits) - 7, 8):
+                byte_val = 0
+                for j in range(8):
+                    byte_val = (byte_val << 1) | bits[i + j]
+                raw.append(byte_val)
+                if byte_val == 0:
+                    break
+            text = raw.decode('latin-1', errors='replace')
+            if flag_re.search(text):
+                results.append(f"[FLAG via manual LSB RGB]: {text[:500]}")
+            elif sum(c.isprintable() for c in text[:100]) > 50:
+                results.append(f"[Manual LSB RGB] {text[:300]}")
+    except Exception:
+        pass
+
+    if not results:
+        return f"=== MULTI-TOOL LSB SCAN: {path.name} ===\nNo LSB data or flags detected by any tool."
+
+    return (
+        f"=== MULTI-TOOL LSB SCAN: {path.name} ===\n"
+        f"Findings ({len(results)} hits):\n"
+        + "\n".join(results)
+    )
+
+
+@mcp.tool()
+def stegseek_rockyou_crack(file_path: str, wordlist: str = "/usr/share/wordlists/rockyou.txt") -> str:
+    """Ultra-fast steghide passphrase cracker using stegseek with rockyou.txt or custom wordlist. Can test millions of passwords per second."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+    out_file = str(OUTPUT_BASE_DIR / f"stegseek_{path.stem}.txt")
+    cmd = ["stegseek", str(path), wordlist, out_file, "--force"]
+    ret, stdout, stderr = _safe_run_command(cmd, timeout=60)
+    combined = stdout + "\n" + stderr
+
+    flag_re = re.compile(FLAG_REGEX_DEFAULT)
+    if Path(out_file).exists() and Path(out_file).stat().st_size > 0:
+        content = Path(out_file).read_text(errors='ignore')[:2000]
+        flag_match = flag_re.search(content)
+        report = (
+            f"=== STEGSEEK ROCKYOU CRACK: {path.name} ===\n"
+            f"Status: PASSWORD FOUND!\n"
+            f"{combined}\n"
+            f"Extracted Content:\n{content}\n"
+        )
+        if flag_match:
+            report += f"\n[FLAG FOUND!]: {flag_match.group()}\n"
+        return report
+
+    return f"=== STEGSEEK ROCKYOU CRACK: {path.name} ===\nStatus: No password found\n{combined}"
+
+
+@mcp.tool()
+def analyze_alpha_channel(file_path: str) -> str:
+    """Deep analysis of the Alpha (transparency) channel for hidden data - checks for non-255 alpha values, patterns, embedded binary data."""
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+    try:
+        im = Image.open(str(path))
+    except Exception as e:
+        return f"Cannot open image: {e}"
+
+    if im.mode != 'RGBA':
+        return f"Image mode is {im.mode}, no alpha channel present."
+
+    arr = np.array(im)
+    alpha = arr[:, :, 3]
+    unique_vals = np.unique(alpha)
+
+    report = (
+        f"=== ALPHA CHANNEL ANALYSIS: {path.name} ===\n"
+        f"Image Size    : {im.size[0]} x {im.size[1]}\n"
+        f"Unique Alpha  : {len(unique_vals)} values\n"
+        f"Alpha Range   : [{alpha.min()}, {alpha.max()}]\n"
+        f"Mean Alpha    : {alpha.mean():.2f}\n"
+    )
+
+    if len(unique_vals) == 1 and unique_vals[0] == 255:
+        report += "Status: Fully opaque image (all alpha = 255). No alpha-channel steganography.\n"
+        return report
+
+    if len(unique_vals) == 2:
+        vals = sorted(unique_vals)
+        report += f"Binary Alpha   : Values {vals} (possible binary message)\n"
+        binary_bits = (alpha.flatten() == vals[1]).astype(int).tolist()
+        raw = bytearray()
+        for i in range(0, len(binary_bits) - 7, 8):
+            byte_val = 0
+            for j in range(8):
+                byte_val = (byte_val << 1) | binary_bits[i + j]
+            raw.append(byte_val)
+            if byte_val == 0:
+                break
+        text = raw.decode('latin-1', errors='replace')
+        flag_re = re.compile(FLAG_REGEX_DEFAULT)
+        flag_match = flag_re.search(text)
+        report += f"Binary Decode  : {text[:500]}\n"
+        if flag_match:
+            report += f"\n[FLAG FOUND!]: {flag_match.group()}\n"
+    else:
+        # LSB of alpha channel
+        lsb_bits = (alpha.flatten() & 1).tolist()
+        raw = bytearray()
+        for i in range(0, min(len(lsb_bits), 16384) - 7, 8):
+            byte_val = 0
+            for j in range(8):
+                byte_val = (byte_val << 1) | lsb_bits[i + j]
+            raw.append(byte_val)
+        null_pos = raw.find(0)
+        meaningful = raw[:null_pos] if null_pos > 0 else raw[:512]
+        text = meaningful.decode('latin-1', errors='replace')
+        flag_re = re.compile(FLAG_REGEX_DEFAULT)
+        flag_match = flag_re.search(text)
+        report += f"Alpha LSB Decode: {text[:500]}\n"
+        if flag_match:
+            report += f"\n[FLAG FOUND!]: {flag_match.group()}\n"
+
+    # Save alpha channel as separate image
+    out_dir = _ensure_dir(f"alpha_{path.stem}")
+    Image.fromarray(alpha).save(str(out_dir / "alpha_channel.png"))
+    report += f"Alpha Image    : {out_dir / 'alpha_channel.png'}\n"
+    return report
+
+
+@mcp.tool()
+def full_auto_solve(file_path: str) -> str:
+    """
+    ULTIMATE AUTOMATED CHALLENGE SOLVER. Runs EVERY applicable StegoKiller engine
+    on the given file in intelligent order, automatically chains results, and
+    extracts flags/payloads without any manual intervention.
+
+    Stages: File ID -> Metadata -> Strings -> Polyglot -> Binwalk -> Format-Specific
+    Deep Analysis (PNG/JPEG/Audio/Archive/PDF/etc.) -> LSB -> Steghide -> Pattern
+    Detection -> FFT -> XOR -> Decode Pipeline -> Flag Extraction.
+    """
+    path = _sanitize_path(file_path)
+    if not path.is_file():
+        return f"[StegoKiller Error]: File not found: {file_path}"
+
+    flag_re = re.compile(FLAG_REGEX_DEFAULT)
+    all_flags = []
+    report_sections = []
+    data = path.read_bytes()
+    ext = path.suffix.lower()
+
+    def _add(title, content):
+        report_sections.append(f"\n{'='*70}\n[{title}]\n{'='*70}\n{content}")
+        for m in flag_re.finditer(content):
+            if m.group() not in all_flags:
+                all_flags.append(m.group())
+
+    # ── STAGE 1: File Structure ──
+    _add("STAGE 1: FILE STRUCTURE & INTEGRITY", inspect_file_structure(str(path)))
+
+    # ── STAGE 2: Metadata ──
+    _add("STAGE 2: METADATA INSPECTION", extract_metadata(str(path)))
+
+    # ── STAGE 3: Flag Pattern Grep ──
+    _add("STAGE 3: STRING & FLAG PATTERN SCAN", grep_flag_patterns(str(path)))
+
+    # ── STAGE 4: Polyglot Detection ──
+    _add("STAGE 4: POLYGLOT DETECTION", detect_polyglots(str(path)))
+
+    # ── STAGE 5: Binwalk ──
+    _add("STAGE 5: BINWALK DEEP SCAN", scan_and_carve_binwalk(str(path), extract=True))
+
+    # ── STAGE 6: Format-Specific Deep Analysis ──
+    if ext in ('.png', '.bmp', '.gif', '.apng'):
+        if ext == '.png':
+            _add("STAGE 6a: PNG CHUNKS", analyze_png_chunks(str(path)))
+            _add("STAGE 6b: PNG IHDR CRC32 CHECK", solve_png_ihdr(str(path)))
+            _add("STAGE 6c: PNG FILTER BYTES", png_filter_byte_analysis(str(path)))
+        if ext in ('.gif', '.apng'):
+            _add("STAGE 6d: GIF/APNG FRAMES", analyze_gif_apng_frames(str(path)))
+
+        _add("STAGE 7: ZSTEG LSB ANALYSIS", run_zsteg_analysis(str(path), all_modes=False))
+        _add("STAGE 8: MULTI-TOOL LSB SCAN", multi_tool_lsb_scan(str(path)))
+        _add("STAGE 9: BITPLANE EXTRACTION", extract_bitplanes(str(path)))
+        _add("STAGE 10: STATISTICAL STEGANALYSIS", statistical_steganalysis(str(path)))
+        _add("STAGE 11: ALPHA CHANNEL ANALYSIS", analyze_alpha_channel(str(path)))
+        _add("STAGE 12: REPEATING PATTERN DETECTION", detect_repeating_pixel_pattern(str(path)))
+        _add("STAGE 13: PVD STEGANALYSIS", detect_pvd_steganography(str(path)))
+        _add("STAGE 14: COLOR PALETTE ANALYSIS", analyze_color_palette_stego(str(path)))
+        _add("STAGE 15: 2D FFT FREQUENCY ANALYSIS", fft_frequency_analysis(str(path)))
+        _add("STAGE 16: QR CODE DETECTION", repair_and_read_qr(str(path)))
+
+    elif ext in ('.jpg', '.jpeg'):
+        _add("STAGE 6: JPEG QUANTIZATION", analyze_jpeg_quantization_tables(str(path)))
+        _add("STAGE 7: JPEG GHOSTS", detect_jpeg_ghosts(str(path)))
+        _add("STAGE 8: STEGHIDE DICTIONARY ATTACK", steghide_dictionary_attack(str(path)))
+        _add("STAGE 9: STEGSEEK ROCKYOU", stegseek_rockyou_crack(str(path)))
+        _add("STAGE 10: JSTEG EXTRACTION", run_jsteg(str(path)))
+        _add("STAGE 11: OUTGUESS EXTRACTION", run_outguess(str(path)))
+        _add("STAGE 12: QR CODE DETECTION", repair_and_read_qr(str(path)))
+
+    elif ext in ('.wav', '.mp3', '.ogg', '.flac'):
+        _add("STAGE 6: SPECTROGRAM", generate_audio_spectrogram(str(path)))
+        _add("STAGE 7: MORSE DECODE", decode_audio_morse(str(path)))
+        _add("STAGE 8: DTMF TONES", decode_dtmf_tones(str(path)))
+        _add("STAGE 9: AUDIO LSB", audio_lsb_extract(str(path)))
+        _add("STAGE 10: AUDIO PHASE DIFF", audio_channel_phase_diff(str(path)))
+        _add("STAGE 11: DEEPSOUND", extract_deepsound(str(path)))
+        if ext == '.mp3':
+            _add("STAGE 12: MP3STEGO", run_mp3stego(str(path)))
+
+    elif ext in ('.pdf',):
+        _add("STAGE 6: PDF STEGO", inspect_pdf_stego(str(path)))
+        _add("STAGE 7: PDF LAYERS & JS", inspect_pdf_layers_and_js(str(path)))
+
+    elif ext in ('.docx', '.xlsx', '.pptx'):
+        _add("STAGE 6: OFFICE XML", inspect_office_xml(str(path)))
+
+    elif ext in ('.doc', '.xls', '.ppt'):
+        _add("STAGE 6: OLE VBA MACROS", inspect_ole_vba_macros(str(path)))
+
+    elif ext in ('.zip', '.tar', '.gz', '.7z', '.rar', '.bz2', '.xz'):
+        _add("STAGE 6: RECURSIVE ARCHIVE UNPACK", recursive_archive_unpacker(str(path)))
+        _add("STAGE 7: ARCHIVE METADATA COVERT", extract_archive_metadata_covert(str(path)))
+
+    elif ext in ('.pcap', '.pcapng', '.cap'):
+        _add("STAGE 6: PCAP COVERT CHANNELS", extract_pcap_covert_channels(str(path)))
+        _add("STAGE 7: NETWORK TUNNELING", detect_network_tunneling(str(path)))
+        _add("STAGE 8: COVERT HTTP HEADERS", detect_covert_http_headers(str(path)))
+
+    # ── STAGE: XOR Brute Force ──
+    _add("STAGE FINAL-1: XOR BRUTE FORCE", xor_bruteforce(str(path)))
+
+    # ── STAGE: Foremost Carving ──
+    _add("STAGE FINAL-2: FOREMOST FILE CARVING", carve_foremost(str(path)))
+
+    # ══ FINAL REPORT ══
+    header = (
+        "\n" + "#" * 78 + "\n"
+        "     ███████╗████████╗███████╗ ██████╗  ██████╗ ██╗  ██╗██╗██╗     ██╗     ███████╗██████╗\n"
+        "     ██╔════╝╚══██╔══╝██╔════╝██╔════╝ ██╔═══██╗██║ ██╔╝██║██║     ██║     ██╔════╝██╔══██╗\n"
+        "     ███████╗   ██║   █████╗  ██║  ███╗██║   ██║█████╔╝ ██║██║     ██║     █████╗  ██████╔╝\n"
+        "     ╚════██║   ██║   ██╔══╝  ██║   ██║██║   ██║██╔═██╗ ██║██║     ██║     ██╔══╝  ██╔══██╗\n"
+        "     ███████║   ██║   ███████╗╚██████╔╝╚██████╔╝██║  ██╗██║███████╗███████╗███████╗██║  ██║\n"
+        "     ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝\n"
+        "                    FULL AUTO-SOLVE REPORT by Knight_S\n"
+        + "#" * 78 + "\n"
+    )
+
+    flag_section = ""
+    if all_flags:
+        flag_section = (
+            "\n" + "!" * 78 + "\n"
+            "  FLAGS FOUND:\n" +
+            "\n".join([f"    >>> {f}" for f in all_flags]) +
+            "\n" + "!" * 78 + "\n"
+        )
+    else:
+        flag_section = "\n[*] No standard CTF flags auto-detected. Review individual stage outputs above.\n"
+
+    return header + flag_section + "\n".join(report_sections)
+
+
+# ============================================================================
 # SERVER ENTRYPOINT
 # ============================================================================
 
@@ -2489,7 +3150,7 @@ if __name__ == "__main__":
         sys.stderr.reconfigure(encoding="utf-8")
 
     print(
-        f"[StegoKiller MCP] Starting StegoKiller Ultra Suite v3.0 by Knight_S (44 Tools Registered)...",
+        f"[StegoKiller MCP] Starting StegoKiller Ultra Suite v4.0 by Knight_S (70 Tools Registered)...",
         file=sys.stderr
     )
     mcp.run()

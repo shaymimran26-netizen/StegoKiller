@@ -26,7 +26,7 @@ license: apache-2.0
   <a href="https://shaymimran26-netizen.github.io/StegoKiller/">🌐 <strong>Live Interactive Documentation & Matrix Website</strong></a> •
   <a href="#quickstart">🚀 <strong>Quick Start</strong></a> •
   <a href="#remote-hosting">☁️ <strong>Free Remote Hosting</strong></a> •
-  <a href="#tool-matrix">🛠️ <strong>60 Tools Matrix</strong></a>
+  <a href="#tool-matrix">🛠️ <strong>70 Tools Matrix</strong></a>
 </p>
 
 </div>
