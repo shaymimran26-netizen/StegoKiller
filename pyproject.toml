@@ -42,10 +42,13 @@ dependencies = [
 ]
 
 [project.scripts]
-stegokiller = "server:mcp.run"
+stegokiller = "cli:main"
 
 [project.urls]
 Homepage = "https://github.com/shaymimran26-netizen/StegoKiller"
 Documentation = "https://shaymimran26-netizen.github.io/StegoKiller/"
 Repository = "https://github.com/shaymimran26-netizen/StegoKiller.git"
 "Bug Tracker" = "https://github.com/shaymimran26-netizen/StegoKiller/issues"
+
+[tool.setuptools]
+py-modules = ["server", "app", "cli", "test_suite"]
