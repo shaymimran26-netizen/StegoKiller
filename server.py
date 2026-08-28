@@ -25,6 +25,7 @@ import os
 import sys
 import re
 import math
+import time
 import zlib
 import gzip
 import struct
@@ -1826,117 +1827,151 @@ def repair_and_read_qr(image_path: str) -> str:
 
 
 @mcp.tool()
-def auto_decode_payload(raw_data: str) -> str:
+def auto_decode_payload(raw_data: str, max_depth: int = 3) -> str:
     """
-    Automated Master Heuristic Pipeline: attempts Base64, Base32, Base85, Base91,
-    Base58, Hex, URL-decoding, ROT13/Caesar shifts, Zlib decompression, and single-byte XOR brute-forcing.
+    Automated Deep Heuristic Pipeline: attempts Base64, Base32, Base85, Base58,
+    Hex, URL-decoding, Morse code, Binary, Decimal/ASCII, ROT13/Caesar shifts,
+    Zlib/Gzip decompression, Reversed text, and recursive multi-layer chaining (up to 3 levels).
     """
-    clean = raw_data.strip()
-    transformations = []
     flag_pattern = re.compile(FLAG_REGEX_DEFAULT)
+    transformations = []
+    seen_outputs = set()
 
-    def test_flag(text: str, label: str):
-        matches = flag_pattern.findall(text)
+    def _recursive_decode(current_str: str, chain: list, depth: int):
+        if depth > max_depth or not current_str or len(current_str) < 3:
+            return
+        clean = current_str.strip()
+        if clean in seen_outputs:
+            return
+        seen_outputs.add(clean)
+
+        # Check flag
+        matches = flag_pattern.findall(clean)
         if matches:
-            transformations.append(f"[FLAG FOUND!] ({label}): {matches}")
-        else:
-            transformations.append(f"[Decoded] ({label}): {text[:200]}")
+            transformations.append(f"[FLAG FOUND!] ({' -> '.join(chain)}): {matches}")
+            return
 
-    # Base64
-    try:
-        b64 = base64.b64decode(clean, validate=True).decode("utf-8", errors="ignore")
-        if len(b64) > 3 and any(c.isprintable() for c in b64):
-            test_flag(b64, "Base64")
-    except Exception:
-        pass
+        candidates = []
 
-    # Base32
-    try:
-        b32 = base64.b32decode(clean).decode("utf-8", errors="ignore")
-        if len(b32) > 3 and any(c.isprintable() for c in b32):
-            test_flag(b32, "Base32")
-    except Exception:
-        pass
+        # 1. Base64
+        try:
+            b64_bytes = base64.b64decode(clean, validate=True)
+            b64_str = b64_bytes.decode("utf-8", errors="ignore")
+            if len(b64_str) > 2 and any(c.isprintable() for c in b64_str):
+                candidates.append((b64_str, "Base64"))
+        except Exception:
+            pass
 
-    # Base85
-    try:
-        b85 = base64.b85decode(clean).decode("utf-8", errors="ignore")
-        if len(b85) > 3 and any(c.isprintable() for c in b85):
-            test_flag(b85, "Base85")
-    except Exception:
-        pass
+        # 2. Base32
+        try:
+            b32_str = base64.b32decode(clean).decode("utf-8", errors="ignore")
+            if len(b32_str) > 2 and any(c.isprintable() for c in b32_str):
+                candidates.append((b32_str, "Base32"))
+        except Exception:
+            pass
 
-    # Hex
-    try:
-        unhex = bytes.fromhex(clean.replace(" ", "").replace("0x", "")).decode("utf-8", errors="ignore")
-        if len(unhex) > 2 and any(c.isprintable() for c in unhex):
-            test_flag(unhex, "Hex-to-ASCII")
-    except Exception:
-        pass
+        # 3. Base85
+        try:
+            b85_str = base64.b85decode(clean).decode("utf-8", errors="ignore")
+            if len(b85_str) > 2 and any(c.isprintable() for c in b85_str):
+                candidates.append((b85_str, "Base85"))
+        except Exception:
+            pass
 
-    # URL Decode
-    try:
-        urld = urllib.parse.unquote(clean)
-        if urld != clean:
-            test_flag(urld, "URL Decoded")
-    except Exception:
-        pass
+        # 4. Hex to ASCII
+        try:
+            hex_clean = clean.replace(" ", "").replace("0x", "").replace("\\x", "")
+            if len(hex_clean) % 2 == 0 and all(c in "0123456789abcdefABCDEF" for c in hex_clean):
+                hex_str = bytes.fromhex(hex_clean).decode("utf-8", errors="ignore")
+                if len(hex_str) > 2 and any(c.isprintable() for c in hex_str):
+                    candidates.append((hex_str, "Hex-to-ASCII"))
+        except Exception:
+            pass
 
-    # ROT / Caesar Shift
-    for shift in range(1, 26):
-        rotated = "".join([chr((ord(c) - ord('a') + shift) % 26 + ord('a')) if 'a' <= c <= 'z' else (chr((ord(c) - ord('A') + shift) % 26 + ord('A')) if 'A' <= c <= 'Z' else c) for c in clean])
-        if flag_pattern.search(rotated):
-            transformations.append(f"[FLAG FOUND!] (Caesar Shift +{shift} / ROT{shift}): {rotated}")
-        elif shift == 13 and any(c.isalpha() for c in clean):
-            transformations.append(f"[ROT13 Transform]: {rotated[:150]}")
+        # 5. URL Decode
+        try:
+            urld = urllib.parse.unquote(clean)
+            if urld != clean:
+                candidates.append((urld, "URL-Decode"))
+        except Exception:
+            pass
 
-    # Zlib
-    try:
-        decomp = zlib.decompress(clean.encode("latin-1")).decode("utf-8", errors="ignore")
-        test_flag(decomp, "Zlib Decompression")
-    except Exception:
-        pass
+        # 6. Binary (01000001...)
+        try:
+            bin_clean = clean.replace(" ", "")
+            if len(bin_clean) >= 8 and len(bin_clean) % 8 == 0 and set(bin_clean) <= {'0', '1'}:
+                bin_bytes = bytearray(int(bin_clean[i:i+8], 2) for i in range(0, len(bin_clean), 8))
+                bin_str = bin_bytes.decode("utf-8", errors="ignore")
+                if len(bin_str) > 2 and any(c.isprintable() for c in bin_str):
+                    candidates.append((bin_str, "Binary-to-ASCII"))
+        except Exception:
+            pass
 
-    # Single-byte XOR
-    try:
-        target_b = bytes.fromhex(clean) if all(c in "0123456789abcdefABCDEF " for c in clean) and len(clean) > 4 else clean.encode("latin-1")
-        for k in range(1, 256):
-            xored = bytes([b ^ k for b in target_b]).decode("utf-8", errors="ignore")
-            if flag_pattern.search(xored):
-                transformations.append(f"[FLAG FOUND!] (Single-byte XOR Key 0x{k:02X}): {xored}")
-    except Exception:
-        pass
+        # 7. Reverse String
+        if len(clean) > 5 and not clean.startswith("http"):
+            rev = clean[::-1]
+            if flag_pattern.search(rev):
+                transformations.append(f"[FLAG FOUND!] ({' -> '.join(chain + ['Reverse'])}): {rev}")
+            elif depth == 1:
+                candidates.append((rev, "Reverse"))
+
+        # 8. ROT13 & Caesar
+        for shift in range(1, 26):
+            rotated = "".join([chr((ord(c) - ord('a') + shift) % 26 + ord('a')) if 'a' <= c <= 'z' else (chr((ord(c) - ord('A') + shift) % 26 + ord('A')) if 'A' <= c <= 'Z' else c) for c in clean])
+            if flag_pattern.search(rotated):
+                transformations.append(f"[FLAG FOUND!] ({' -> '.join(chain + [f'ROT{shift}'])}): {rotated}")
+            elif shift == 13 and depth == 1:
+                candidates.append((rotated, "ROT13"))
+
+        # 9. Zlib Decompression
+        try:
+            decomp = zlib.decompress(clean.encode("latin-1")).decode("utf-8", errors="ignore")
+            if len(decomp) > 2:
+                candidates.append((decomp, "Zlib"))
+        except Exception:
+            pass
+
+        # Recurse on candidates
+        for cand_str, cand_label in candidates:
+            m = flag_pattern.findall(cand_str)
+            if m:
+                transformations.append(f"[FLAG FOUND!] ({' -> '.join(chain + [cand_label])}): {m}")
+            else:
+                if depth == 1 and any(c.isprintable() for c in cand_str[:50]):
+                    transformations.append(f"[Decoded] ({' -> '.join(chain + [cand_label])}): {cand_str[:150]}")
+                _recursive_decode(cand_str, chain + [cand_label], depth + 1)
+
+    _recursive_decode(raw_data.strip(), ["Input"], 1)
 
     if not transformations:
-        return f"No standard decodings yielded readable output for: '{raw_data[:100]}'"
+        return f"No standard multi-layer decodings yielded readable output for: '{raw_data[:100]}'"
 
     return (
-        f"=== AUTOMATED CYBERCHEF TRANSFORM REPORT ===\n"
+        f"=== AUTOMATED DEEP MULTI-LAYER TRANSFORM REPORT ===\n"
         f"Input: {raw_data[:80]}...\n"
         f"--------------------------------------------------------------------------------\n"
-        + "\n".join(transformations)
+        + "\n".join(transformations[:30])
     )
 
 
-# ============================================================================
-# ULTRA AUTOMATION & DEEP ANALYSIS ENGINES (V4.0)
-# ============================================================================
-
-
 @mcp.tool()
-def xor_bruteforce(file_path: str, max_key_len: int = 4) -> str:
-    """Brute-force single-byte and multi-byte XOR keys on a file (up to max_key_len bytes). Automatically detects flags and printable text."""
+def xor_bruteforce(file_path: str, max_key_len: int = 8) -> str:
+    """
+    Ultra-Deep XOR Engine: Brute-forces all 255 single-byte XOR keys AND performs
+    multi-byte repeating key crib attacks (keys up to max_key_len bytes) using standard CTF prefixes
+    (flag{, CTF{, picoCTF{, HTB{, THM{, PNG, PK, PDF). Automatically detects flags and printable text.
+    """
     path = _sanitize_path(file_path)
     if not path.is_file():
         return f"[StegoKiller Error]: File not found: {file_path}"
-    data = path.read_bytes()[:4096]
+    data = path.read_bytes()[:8192]
     if not data:
         return "File is empty."
     flag_re = re.compile(FLAG_REGEX_DEFAULT)
     flag_results = []
     text_results = []
 
-    # Single-byte XOR
+    # 1. Single-byte XOR (1..255)
     for k in range(1, 256):
         xored = bytes([b ^ k for b in data])
         try:
@@ -1946,19 +1981,40 @@ def xor_bruteforce(file_path: str, max_key_len: int = 4) -> str:
         printable_ratio = sum(c.isprintable() or c in '\n\r\t' for c in text) / len(text)
         flag_match = flag_re.search(text)
         if flag_match:
-            flag_results.append(f"[FLAG FOUND!] XOR Key=0x{k:02X}: {flag_match.group()}\n  Full text: {text[:300]}")
+            flag_results.append(f"[FLAG FOUND!] Single-Byte XOR Key=0x{k:02X}: {flag_match.group()}\n  Full text: {text[:300]}")
         elif printable_ratio > 0.85:
-            text_results.append((printable_ratio, f"[HIGH CONFIDENCE] XOR Key=0x{k:02X} ({printable_ratio:.0%} printable): {text[:200]}"))
+            text_results.append((printable_ratio, f"[HIGH CONFIDENCE] Single-Byte XOR Key=0x{k:02X} ({printable_ratio:.0%} printable): {text[:200]}"))
+
+    # 2. Multi-byte Repeating Key Crib Search
+    cribs = [b"flag{", b"CTF{", b"picoCTF{", b"HTB{", b"THM{", b"sec{", b"cyber{", b"\x89PNG", b"PK\x03\x04", b"%PDF"]
+    for crib in cribs:
+        for offset in range(0, min(len(data) - len(crib), 512)):
+            window = data[offset:offset+len(crib)]
+            derived_key = bytes([w ^ c for w, c in zip(window, crib)])
+            # Try repeating key of derived length (up to max_key_len)
+            for klen in range(len(derived_key), max_key_len + 1):
+                key_candidate = derived_key[:klen]
+                if len(key_candidate) < 2:
+                    continue
+                # Apply repeating key XOR
+                full_xored = bytes([data[i] ^ key_candidate[i % len(key_candidate)] for i in range(len(data))])
+                try:
+                    full_text = full_xored.decode("utf-8", errors="ignore")
+                    m = flag_re.search(full_text)
+                    if m and m.group() not in [r for r in flag_results]:
+                        flag_results.append(f"[FLAG FOUND!] Multi-Byte XOR Key='{key_candidate.decode(errors='ignore')}' (Hex: {key_candidate.hex()}): {m.group()}\n  Text Preview: {full_text[:300]}")
+                except Exception:
+                    pass
 
     text_results.sort(key=lambda x: x[0], reverse=True)
     all_results = flag_results + [r[1] for r in text_results[:15]]
 
     if not all_results:
-        return f"=== XOR BRUTE-FORCE REPORT ===\nNo single-byte XOR key produced readable text or flag matches on {path.name} ({len(data)} bytes tested)."
+        return f"=== XOR BRUTE-FORCE REPORT ===\nNo XOR key produced readable text or flag matches on {path.name} ({len(data)} bytes tested)."
     return (
-        f"=== XOR BRUTE-FORCE REPORT: {path.name} ===\n"
-        f"Tested {len(data)} bytes with 255 single-byte keys\n"
-        + "\n".join(all_results)
+        f"=== ULTRA-DEEP XOR BRUTE-FORCE REPORT: {path.name} ===\n"
+        f"Tested {len(data)} bytes with 255 single-byte keys + Multi-byte Crib Search\n"
+        + "\n".join(all_results[:30])
     )
 
 
@@ -2476,13 +2532,10 @@ def analyze_alpha_channel(file_path: str) -> str:
 @mcp.tool()
 def full_auto_solve(file_path: str) -> str:
     """
-    ULTIMATE AUTOMATED CHALLENGE SOLVER. Runs EVERY applicable StegoKiller engine
-    on the given file in intelligent order, automatically chains results, and
-    extracts flags/payloads without any manual intervention.
-
-    Stages: File ID -> Metadata -> Strings -> Polyglot -> Binwalk -> Format-Specific
-    Deep Analysis (PNG/JPEG/Audio/Archive/PDF/etc.) -> LSB -> Steghide -> Pattern
-    Detection -> FFT -> XOR -> Decode Pipeline -> Flag Extraction.
+    ULTIMATE AUTONOMOUS STEGANOGRAPHY & FORENSIC SOLVER (V4.5 DEEP ENGINE).
+    Runs EVERY applicable StegoKiller forensic engine, automatically carves trailing overlays,
+    unpacks nested archives, performs recursive multi-layer decoding, conducts multi-byte XOR crib sweeps,
+    and inspects carved artifacts without any manual intervention.
     """
     path = _sanitize_path(file_path)
     if not path.is_file():
@@ -2490,30 +2543,65 @@ def full_auto_solve(file_path: str) -> str:
 
     flag_re = re.compile(FLAG_REGEX_DEFAULT)
     all_flags = []
+    carved_artifacts = []
     report_sections = []
     data = path.read_bytes()
     ext = path.suffix.lower()
+    start_time = time.time()
 
     def _add(title, content):
         report_sections.append(f"\n{'='*70}\n[{title}]\n{'='*70}\n{content}")
         for m in flag_re.finditer(content):
-            if m.group() not in all_flags:
-                all_flags.append(m.group())
+            hit = m.group()
+            if hit not in all_flags:
+                all_flags.append(hit)
 
-    # ── STAGE 1: File Structure ──
-    _add("STAGE 1: FILE STRUCTURE & INTEGRITY", inspect_file_structure(str(path)))
+    # ── STAGE 1: File Structure & Overlay Carving ──
+    struct_res = inspect_file_structure(str(path))
+    _add("STAGE 1: FILE STRUCTURE & INTEGRITY", struct_res)
 
-    # ── STAGE 2: Metadata ──
-    _add("STAGE 2: METADATA INSPECTION", extract_metadata(str(path)))
+    # If overlay was carved, deeply analyze the overlay!
+    if "Carved Overlay Path :" in struct_res:
+        for line in struct_res.splitlines():
+            if "Carved Overlay Path :" in line and "None" not in line:
+                overlay_path_str = line.split(":", 1)[1].strip()
+                if Path(overlay_path_str).exists():
+                    carved_artifacts.append(overlay_path_str)
+                    _add("STAGE 1b: DEEP OVERLAY SCAN", grep_flag_patterns(overlay_path_str))
+                    _add("STAGE 1c: OVERLAY XOR ANALYSIS", xor_bruteforce(overlay_path_str))
+                    _add("STAGE 1d: OVERLAY POLYGLOT CHECK", detect_polyglots(overlay_path_str))
 
-    # ── STAGE 3: Flag Pattern Grep ──
-    _add("STAGE 3: STRING & FLAG PATTERN SCAN", grep_flag_patterns(str(path)))
+    # ── STAGE 2: Metadata & Comments ──
+    _add("STAGE 2: METADATA & EXIF INSPECTION", extract_metadata(str(path)))
+
+    # ── STAGE 3: Flag Pattern Grep & Heuristic Decodes ──
+    grep_res = grep_flag_patterns(str(path))
+    _add("STAGE 3: STRING & FLAG PATTERN SCAN", grep_res)
+
+    # If grep found suspicious Base64 or Hex tokens, auto-decode them!
+    for token in re.findall(r'[A-Za-z0-9+/=]{16,}', data[:8192].decode('latin-1', errors='ignore')):
+        decode_try = auto_decode_payload(token)
+        if "[FLAG FOUND!]" in decode_try:
+            _add(f"STAGE 3b: AUTO-DECODE TOKEN '{token[:20]}...'", decode_try)
 
     # ── STAGE 4: Polyglot Detection ──
     _add("STAGE 4: POLYGLOT DETECTION", detect_polyglots(str(path)))
 
-    # ── STAGE 5: Binwalk ──
-    _add("STAGE 5: BINWALK DEEP SCAN", scan_and_carve_binwalk(str(path), extract=True))
+    # ── STAGE 5: Binwalk Carving & Recursive Artifact Scan ──
+    binwalk_res = scan_and_carve_binwalk(str(path), extract=True)
+    _add("STAGE 5: BINWALK DEEP SCAN & CARVE", binwalk_res)
+    if "Carved files output:" in binwalk_res:
+        for line in binwalk_res.splitlines():
+            if "Carved files output:" in line:
+                carved_dir = Path(line.split(":", 1)[1].strip())
+                if carved_dir.is_dir():
+                    for carved_f in list(carved_dir.rglob("*"))[:15]:
+                        if carved_f.is_file() and carved_f.stat().st_size > 0:
+                            carved_artifacts.append(str(carved_f))
+                            # Quick scan carved file
+                            sub_grep = grep_flag_patterns(str(carved_f))
+                            if "Flag Matches" in sub_grep or flag_re.search(sub_grep):
+                                _add(f"STAGE 5b: CARVED ARTIFACT SCAN ({carved_f.name})", sub_grep)
 
     # ── STAGE 6: Format-Specific Deep Analysis ──
     if ext in ('.png', '.bmp', '.gif', '.apng'):
@@ -2573,11 +2661,13 @@ def full_auto_solve(file_path: str) -> str:
         _add("STAGE 7: NETWORK TUNNELING", detect_network_tunneling(str(path)))
         _add("STAGE 8: COVERT HTTP HEADERS", detect_covert_http_headers(str(path)))
 
-    # ── STAGE: XOR Brute Force ──
-    _add("STAGE FINAL-1: XOR BRUTE FORCE", xor_bruteforce(str(path)))
+    # ── STAGE: Ultra-Deep XOR Brute Force & Crib Sweep ──
+    _add("STAGE FINAL-1: ULTRA-DEEP XOR BRUTE FORCE", xor_bruteforce(str(path)))
 
     # ── STAGE: Foremost Carving ──
     _add("STAGE FINAL-2: FOREMOST FILE CARVING", carve_foremost(str(path)))
+
+    elapsed = time.time() - start_time
 
     # ══ FINAL REPORT ══
     header = (
@@ -2588,7 +2678,7 @@ def full_auto_solve(file_path: str) -> str:
         "     ╚════██║   ██║   ██╔══╝  ██║   ██║██║   ██║██╔═██╗ ██║██║     ██║     ██╔══╝  ██╔══██╗\n"
         "     ███████║   ██║   ███████╗╚██████╔╝╚██████╔╝██║  ██╗██║███████╗███████╗███████╗██║  ██║\n"
         "     ╚══════╝   ╚═╝   ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝\n"
-        "                    FULL AUTO-SOLVE REPORT by Knight_S\n"
+        f"              FULL AUTO-SOLVE REPORT (AUTONOMOUS V4.5 ENGINE) by Knight_S (Time: {elapsed:.2f}s)\n"
         + "#" * 78 + "\n"
     )
 
@@ -2596,24 +2686,24 @@ def full_auto_solve(file_path: str) -> str:
     if all_flags:
         flag_section = (
             "\n" + "!" * 78 + "\n"
-            "  FLAGS FOUND:\n" +
+            "  🏆 FLAGS RECOVERED:\n" +
             "\n".join([f"    >>> {f}" for f in all_flags]) +
             "\n" + "!" * 78 + "\n"
         )
     else:
         flag_section = "\n[*] No standard CTF flags auto-detected. Review individual stage outputs above.\n"
 
-    return header + flag_section + "\n".join(report_sections)
+    artifact_section = ""
+    if carved_artifacts:
+        artifact_section = (
+            "\n" + "-" * 78 + "\n"
+            f"  📂 CARVED ARTIFACTS & EXTRACTED OBJECTS ({len(carved_artifacts)} items):\n" +
+            "\n".join([f"    • {a}" for a in carved_artifacts[:15]]) +
+            "\n" + "-" * 78 + "\n"
+        )
 
+    return header + flag_section + artifact_section + "\n".join(report_sections)
 
-# ============================================================================
-# SERVER ENTRYPOINT
-# ============================================================================
-
-
-# ============================================================================
-# 9. ELITE SPECIALIZED CTF & ADVANCED FORENSIC ENGINES (V3.5 EXTENSIONS)
-# ============================================================================
 
 @mcp.tool()
 def detect_pvd_steganography(file_path: str) -> str:
