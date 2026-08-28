@@ -1,7 +1,7 @@
 # ==============================================================================
 # StegoKiller MCP Suite - Production Hardened Docker Container
 # Author: Knight_S
-# Version: 4.0.0 (70 Specialized Tools)
+# Version: 4.5.0 (70 Specialized Tools)
 # ==============================================================================
 
 FROM debian:bookworm-slim

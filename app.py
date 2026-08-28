@@ -44,7 +44,7 @@ def build_tool_manifest():
 SERVER_CARD_PAYLOAD = {
     "serverInfo": {
         "name": "stegokiller",
-        "version": "4.0.0"
+        "version": "4.5.0"
     },
     "description": "StegoKiller Ultra Suite by Knight_S - Ultimate Steganography & Digital Forensics Suite (70 Specialized Tools)",
     "connection": {

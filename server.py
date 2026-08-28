@@ -12,7 +12,7 @@ r"""
  Project  : StegoKiller MCP Server (Enterprise Edition)
  Author   : Knight_S
  Framework: FastMCP (Model Context Protocol)
- Version  : 4.0.0 (Fully Automated CTF Suite)
+ Version  : 4.5.0 (Fully Automated CTF Suite)
  License  : Apache-2.0
  Description:
    The ultimate steganography, digital forensics, covert-channel, and payload
@@ -3333,7 +3333,7 @@ if __name__ == "__main__":
         sys.stderr.reconfigure(encoding="utf-8")
 
     print(
-        f"[StegoKiller MCP] Starting StegoKiller Ultra Suite v4.0 by Knight_S (70 Tools Registered)...",
+        f"[StegoKiller MCP] Starting StegoKiller Ultra Suite v4.5 by Knight_S (70 Tools Registered)...",
         file=sys.stderr
     )
     mcp.run()

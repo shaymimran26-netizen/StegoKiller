@@ -13,7 +13,7 @@ license: apache-2.0
 <div align="center">
 
 # ⚡ StegoKiller MCP Server
-### The Ultimate Steganography, Digital Forensics & Covert-Channel Suite (v4.0.0)
+### The Ultimate Steganography, Digital Forensics & Covert-Channel Suite (v4.5.0)
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=for-the-badge&logo=python)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg?style=for-the-badge)](LICENSE)
@@ -42,7 +42,7 @@ license: apache-2.0
 
 ## 🎯 Full Autonomous Solving (`full_auto_solve`)
 
-The centerpiece of **StegoKiller v4.0.0** is the **`full_auto_solve`** engine. Instead of manually guessing tools, simply pass any file path:
+The centerpiece of **StegoKiller v4.5.0** is the **`full_auto_solve`** engine. Instead of manually guessing tools, simply pass any file path:
 
 ```python
 full_auto_solve("/path/to/challenge.png")

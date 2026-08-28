@@ -10,7 +10,7 @@ r"""
                 |___/    |_____|                                      
 ================================================================================
  StegoKiller CLI — Standalone Steganography & Digital Forensics Suite
- Author: Knight_S • Version: 4.0.0 (70 Specialized Forensic Engines)
+ Author: Knight_S • Version: 4.5.0 (70 Specialized Forensic Engines)
  Inspired by sqlmap, binwalk & steghide
 ================================================================================
 """
@@ -118,7 +118,7 @@ def print_banner():
    \___ \| __/ _ \/ _` |/ _ \ | ' /| | | |/ _ \ '__|| |   | |    | | 
     ___) | ||  __/ (_| | (_) || . \| | | |  __/ |   | |___| |___ | | 
    |____/ \__\___|\__, |\___/_|_|\_\_|_|_|\___|_|    \____|_____|___|
-                  |___/   {Color.MAGENTA}v4.0.0 — 70 Forensic Engines{Color.CYAN}
+                  |___/   {Color.MAGENTA}v4.5.0 — 70 Forensic Engines{Color.CYAN}
 {Color.DIM}   Automatic Steganography, Forensics & Covert-Channel Exploitation Tool
    Author: Knight_S • GitHub: https://github.com/shaymimran26-netizen/StegoKiller{Color.RESET}
 """

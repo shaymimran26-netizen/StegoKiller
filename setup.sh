@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# StegoKiller Ultra Suite v4.0.0 - Automated Toolchain Installer
+# StegoKiller Ultra Suite v4.5.0 - Automated Toolchain Installer
 # Author: Knight_S
 # ==============================================================================
 
