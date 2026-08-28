@@ -1876,7 +1876,8 @@ def xor_bruteforce(file_path: str, max_key_len: int = 4) -> str:
     if not data:
         return "File is empty."
     flag_re = re.compile(FLAG_REGEX_DEFAULT)
-    results = []
+    flag_results = []
+    text_results = []
 
     # Single-byte XOR
     for k in range(1, 256):
@@ -1888,17 +1889,19 @@ def xor_bruteforce(file_path: str, max_key_len: int = 4) -> str:
         printable_ratio = sum(c.isprintable() or c in '\n\r\t' for c in text) / len(text)
         flag_match = flag_re.search(text)
         if flag_match:
-            results.append(f"[FLAG FOUND!] XOR Key=0x{k:02X}: {flag_match.group()}")
-            results.append(f"  Full text: {text[:300]}")
+            flag_results.append(f"[FLAG FOUND!] XOR Key=0x{k:02X}: {flag_match.group()}\n  Full text: {text[:300]}")
         elif printable_ratio > 0.85:
-            results.append(f"[HIGH CONFIDENCE] XOR Key=0x{k:02X} ({printable_ratio:.0%} printable): {text[:200]}")
+            text_results.append((printable_ratio, f"[HIGH CONFIDENCE] XOR Key=0x{k:02X} ({printable_ratio:.0%} printable): {text[:200]}"))
 
-    if not results:
+    text_results.sort(key=lambda x: x[0], reverse=True)
+    all_results = flag_results + [r[1] for r in text_results[:15]]
+
+    if not all_results:
         return f"=== XOR BRUTE-FORCE REPORT ===\nNo single-byte XOR key produced readable text or flag matches on {path.name} ({len(data)} bytes tested)."
     return (
         f"=== XOR BRUTE-FORCE REPORT: {path.name} ===\n"
         f"Tested {len(data)} bytes with 255 single-byte keys\n"
-        + "\n".join(results[:30])
+        + "\n".join(all_results)
     )
 
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>StegoKiller MCP Server | Ultra Steganography & Forensics Suite</title>
-  <meta name="description" content="Production-grade FastMCP server with 44+ steganography, digital forensics, and covert-channel extraction tools.">
+  <meta name="description" content="Production-grade FastMCP server with 70 specialized steganography, digital forensics, and autonomous challenge solving engines.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,36 +33,34 @@
       overflow-x: hidden;
     }
 
-    /* Cyber Glow Background */
     .glow-bg {
       position: fixed;
       top: -200px;
       left: 50%;
       transform: translateX(-50%);
-      width: 800px;
+      width: 900px;
       height: 600px;
-      background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, rgba(168, 85, 247, 0.08) 50%, rgba(9, 13, 22, 0) 80%);
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.18) 0%, rgba(168, 85, 247, 0.1) 50%, rgba(9, 13, 22, 0) 80%);
       pointer-events: none;
       z-index: 0;
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1240px;
       margin: 0 auto;
       padding: 0 24px;
       position: relative;
       z-index: 1;
     }
 
-    /* Header & Nav */
     header {
-      padding: 24px 0;
+      padding: 20px 0;
       border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(9, 13, 22, 0.85);
+      background: rgba(9, 13, 22, 0.88);
     }
     .nav-wrap {
       display: flex;
@@ -72,7 +70,7 @@
     .logo {
       font-family: var(--font-mono);
       font-weight: 700;
-      font-size: 1.25rem;
+      font-size: 1.3rem;
       color: var(--accent-cyan);
       display: flex;
       align-items: center;
@@ -86,7 +84,7 @@
     }
     .nav-links {
       display: flex;
-      gap: 20px;
+      gap: 24px;
       align-items: center;
     }
     .nav-links a {
@@ -98,16 +96,14 @@
     .nav-links a:hover { color: var(--accent-cyan); }
     .btn-github {
       background: #1e293b;
-      color: #fff;
+      border: 1px solid var(--border);
+      color: #fff !important;
       padding: 8px 16px;
       border-radius: 8px;
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-      border: 1px solid var(--border);
       display: flex;
       align-items: center;
       gap: 8px;
+      font-weight: 600;
       transition: all 0.2s;
     }
     .btn-github:hover {
@@ -115,30 +111,28 @@
       border-color: var(--accent-cyan);
     }
 
-    /* Hero Section */
     .hero {
-      padding: 80px 0 60px;
       text-align: center;
+      padding: 70px 0 40px;
     }
     .badge-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(6, 182, 212, 0.1);
+      display: inline-block;
+      background: rgba(6, 182, 212, 0.12);
       border: 1px solid rgba(6, 182, 212, 0.3);
-      padding: 6px 14px;
-      border-radius: 50px;
-      font-size: 0.85rem;
-      font-family: var(--font-mono);
       color: var(--accent-cyan);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
       margin-bottom: 24px;
     }
     .hero h1 {
-      font-size: 3.5rem;
+      font-size: 3rem;
       font-weight: 800;
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      line-height: 1.2;
     }
     .gradient-text {
       background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
@@ -148,59 +142,80 @@
     .hero p {
       font-size: 1.2rem;
       color: var(--text-muted);
-      max-width: 780px;
-      margin: 0 auto 36px;
+      max-width: 800px;
+      margin: 0 auto 30px;
     }
     .badges-row {
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
       gap: 12px;
-      margin-bottom: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
     }
-    .badges-row img { height: 26px; }
 
-    /* Install & Config Tabs */
-    .quick-start {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+    .feature-banner {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(168, 85, 247, 0.1));
+      border: 1px solid rgba(6, 182, 212, 0.4);
       border-radius: 16px;
-      padding: 32px;
-      max-width: 900px;
-      margin: 0 auto 80px;
-      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+      padding: 28px;
+      margin-bottom: 50px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+    .feature-banner-icon {
+      font-size: 2.5rem;
+      background: #0f172a;
+      border: 1px solid var(--accent-cyan);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .feature-banner h3 {
+      font-size: 1.3rem;
+      color: var(--accent-cyan);
+      margin-bottom: 6px;
+    }
+    .feature-banner p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* Quickstart Section */
+    .quick-start {
+      margin-bottom: 60px;
     }
     .tab-header {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
       margin-bottom: 20px;
-      overflow-x: auto;
     }
     .tab-btn {
-      background: none;
+      background: transparent;
       border: none;
       color: var(--text-muted);
-      font-family: var(--font-sans);
+      padding: 12px 20px;
       font-size: 0.95rem;
       font-weight: 600;
-      padding: 8px 16px;
-      border-radius: 8px;
       cursor: pointer;
+      border-bottom: 2px solid transparent;
       transition: all 0.2s;
     }
     .tab-btn.active {
-      background: rgba(6, 182, 212, 0.15);
       color: var(--accent-cyan);
+      border-bottom-color: var(--accent-cyan);
     }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .code-block {
       background: #060911;
       border: 1px solid rgba(51, 65, 85, 0.6);
-      border-radius: 10px;
-      padding: 16px;
+      border-radius: 12px;
+      padding: 18px;
       position: relative;
       font-family: var(--font-mono);
       font-size: 0.9rem;
@@ -208,8 +223,8 @@
     }
     .copy-btn {
       position: absolute;
-      top: 12px;
-      right: 12px;
+      top: 14px;
+      right: 14px;
       background: #1e293b;
       border: 1px solid var(--border);
       color: var(--text-muted);
@@ -228,13 +243,36 @@
     .section-title {
       font-size: 2.2rem;
       font-weight: 700;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       text-align: center;
     }
     .section-subtitle {
       text-align: center;
       color: var(--text-muted);
-      margin-bottom: 40px;
+      margin-bottom: 30px;
+    }
+    .category-filter {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+    }
+    .filter-btn {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--accent-cyan);
+      color: #000;
+      border-color: var(--accent-cyan);
     }
     .search-box {
       max-width: 600px;
@@ -309,7 +347,6 @@
       line-height: 1.5;
     }
 
-    /* Footer */
     footer {
       border-top: 1px solid var(--border);
       padding: 40px 0;
@@ -346,20 +383,30 @@
     <section class="hero">
       <div class="badge-tag">⚡ FastMCP Steganography Engine • Created by Knight_S</div>
       <h1>Ultra-Enriched <span class="gradient-text">Steganography & Forensics</span> MCP Suite</h1>
-      <p>Seamlessly arm Claude, Cursor, and AI agents with 44+ automated forensic tools across Images, Audio, Video, PCAP Covert Channels, Polyglots, and Text payloads.</p>
+      <p>Seamlessly arm Claude, Cursor, and AI agents with 70 specialized automated forensic tools across Images, Audio, Video, PCAP Covert Channels, Polyglots, and Text payloads.</p>
       
       <div class="badges-row">
-        <img src="https://img.shields.io/badge/Tools-44%20Specialized%20Engines-06b6d4?style=for-the-badge&logo=shield" alt="Tools">
+        <img src="https://img.shields.io/badge/Tools-70%20Specialized%20Engines-06b6d4?style=for-the-badge&logo=shield" alt="Tools">
         <img src="https://img.shields.io/badge/FastMCP-2025%20Ready-10b981?style=for-the-badge" alt="FastMCP">
         <img src="https://img.shields.io/badge/Docker-GHCR%20Published-a855f7?style=for-the-badge&logo=docker" alt="Docker">
         <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge" alt="License">
       </div>
     </section>
 
+    <!-- Full Auto Solve Showcase -->
+    <div class="feature-banner">
+      <div class="feature-banner-icon">🎯</div>
+      <div>
+        <h3>Introducing <code>full_auto_solve</code> — One-Click Autonomous Solving</h3>
+        <p>Pass any challenge file path and StegoKiller automatically executes a 16+ stage forensic pipeline (File ID → Entropy → Metadata → Flags → Polyglots → Binwalk → Format-Specific Deep Analysis → Parallel LSB → Steghide Dictionary → FFT → XOR Brute-Force → Flag Extraction) without manual intervention.</p>
+      </div>
+    </div>
+
     <!-- Quickstart Config Tabs -->
     <section id="quickstart" class="quick-start">
       <div class="tab-header">
         <button class="tab-btn active" onclick="openTab(event, 'tab-claude')">Claude Desktop</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab-remote')">Remote SSE Cloud</button>
         <button class="tab-btn" onclick="openTab(event, 'tab-smithery')">Smithery CLI</button>
         <button class="tab-btn" onclick="openTab(event, 'tab-docker')">Docker / GHCR</button>
         <button class="tab-btn" onclick="openTab(event, 'tab-pip')">Python PIP</button>
@@ -381,11 +428,25 @@
         </div>
       </div>
 
+      <div id="tab-remote" class="tab-content">
+        <p style="color: var(--text-muted); margin-bottom: 12px;">Connect directly to the live cloud SSE endpoint without installing dependencies:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode('remote-cfg')">Copy</button>
+          <pre id="remote-cfg">{
+  "mcpServers": {
+    "stegokiller_cloud": {
+      "url": "https://stegokiller.onrender.com/sse"
+    }
+  }
+}</pre>
+        </div>
+      </div>
+
       <div id="tab-smithery" class="tab-content">
         <p style="color: var(--text-muted); margin-bottom: 12px;">Install directly in 1-click via Smithery CLI:</p>
         <div class="code-block">
           <button class="copy-btn" onclick="copyCode('smithery-cmd')">Copy</button>
-          <pre id="smithery-cmd">npx -y @smithery/cli install stegokiller --client claude</pre>
+          <pre id="smithery-cmd">npx -y @smithery/cli install @shaymimran26/stegokiller --client claude</pre>
         </div>
       </div>
 
@@ -421,209 +482,513 @@ python3 server.py</pre>
 
     <!-- 70 Tools Matrix -->
     <section id="tools">
-      <h2 class="section-title">44 Specialized Forensic Engines</h2>
+      <h2 class="section-title">70 Specialized Forensic Engines</h2>
       <p class="section-subtitle">Search by tool name, format, or steganography technique</p>
 
+      <div class="category-filter">
+        <button class="filter-btn active" onclick="filterCategory('all', event)">All (70)</button>
+        <button class="filter-btn" onclick="filterCategory('triage', event)">Triage & Carving</button>
+        <button class="filter-btn" onclick="filterCategory('image', event)">Image Stego</button>
+        <button class="filter-btn" onclick="filterCategory('audio', event)">Audio & Radio</button>
+        <button class="filter-btn" onclick="filterCategory('text', event)">Text & Ciphers</button>
+        <button class="filter-btn" onclick="filterCategory('network', event)">Network PCAP</button>
+        <button class="filter-btn" onclick="filterCategory('ai', event)">AI & Decoding</button>
+      </div>
+
       <div class="search-box">
-        <input type="text" id="toolSearch" placeholder="Search tools (e.g. zsteg, dtmf, ihdr, pcap, morse, bacon, audio)..." onkeyup="filterTools()">
+        <input type="text" id="toolSearch" placeholder="Search 70 tools (e.g. auto_solve, zsteg, dtmf, ihdr, pcap, morse, bacon, xor, fft)..." onkeyup="filterTools()">
       </div>
 
       <div class="tools-grid" id="toolsGrid">
-        <!-- Triage & Polyglot -->
-        <div class="tool-card" data-cat="triage">
-          <div class="tool-header">
-            <span class="tool-name">auto_triage_challenge</span>
-            <span class="tool-category cat-triage">Triage</span>
-          </div>
-          <p class="tool-desc">Autonomous 5-stage master pipeline: magic verification, flag search, metadata extraction, polyglots, and signature scan in one shot.</p>
-        </div>
-
-        <div class="tool-card" data-cat="triage">
-          <div class="tool-header">
-            <span class="tool-name">inspect_file_structure</span>
-            <span class="tool-category cat-triage">Triage</span>
-          </div>
-          <p class="tool-desc">Checks 25+ magic headers, calculates quadrant and global Shannon entropy, and carves trailing overlay bytes past EOF markers.</p>
-        </div>
-
-        <div class="tool-card" data-cat="triage">
-          <div class="tool-header">
-            <span class="tool-name">detect_polyglots</span>
-            <span class="tool-category cat-triage">Triage</span>
-          </div>
-          <p class="tool-desc">Identifies dual-valid polyglot files (ZIP+JPG, PDF+ZIP, GIF+JS, HTML+PNG, RAR+JPEG) based on Corkami forensics.</p>
-        </div>
-
-        <div class="tool-card" data-cat="triage">
-          <div class="tool-header">
-            <span class="tool-name">extract_metadata</span>
-            <span class="tool-category cat-triage">Metadata</span>
-          </div>
-          <p class="tool-desc">Deep EXIF/XMP/IPTC metadata extraction and thumbnail recovery using ExifTool with PIL fallback.</p>
-        </div>
-
-        <div class="tool-card" data-cat="triage">
-          <div class="tool-header">
-            <span class="tool-name">grep_flag_patterns</span>
-            <span class="tool-category cat-triage">Strings</span>
-          </div>
-          <p class="tool-desc">Multi-encoding regex flag search across ASCII, UTF-8, UTF-16LE, and UTF-16BE binary byte streams.</p>
-        </div>
-
-        <!-- Image Spatial & LSB -->
         <div class="tool-card" data-cat="image">
           <div class="tool-header">
-            <span class="tool-name">statistical_steganalysis</span>
-            <span class="tool-category cat-image">Steganalysis</span>
+            <span class="tool-name">analyze_alpha_channel</span>
+            <span class="tool-category cat-image">Alpha Channel</span>
           </div>
-          <p class="tool-desc">Executes Chi-Square (χ²), Sample Pairs (SPA), and PoV tests to estimate hidden LSB payload percentage.</p>
+          <p class="tool-desc">Deep analysis of the Alpha (transparency) channel for hidden data - checks for non-255 alpha values, patterns, embedded binary data.</p>
         </div>
-
         <div class="tool-card" data-cat="image">
           <div class="tool-header">
-            <span class="tool-name">solve_png_ihdr</span>
-            <span class="tool-category cat-image">PNG Repair</span>
+            <span class="tool-name">analyze_color_palette_stego</span>
+            <span class="tool-category cat-image">Palette Stego</span>
           </div>
-          <p class="tool-desc">Brute-forces correct PNG dimensions (Height/Width) against the IHDR CRC32 checksum to restore cropped challenge images.</p>
+          <p class="tool-desc">Detect palette-based steganography (EzStego, Cloak, PLTE chunk permutations) in indexed PNG and GIF images by analyzing palette sorting and index parity.</p>
         </div>
-
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">analyze_font_stego</span>
+            <span class="tool-category cat-text">Font Stego</span>
+          </div>
+          <p class="tool-desc">Inspect TrueType/OpenType font files (.ttf, .otf) for hidden cmap table mappings and custom font tables.</p>
+        </div>
         <div class="tool-card" data-cat="image">
           <div class="tool-header">
-            <span class="tool-name">extract_bitplanes</span>
-            <span class="tool-category cat-image">Bitplanes</span>
+            <span class="tool-name">analyze_gif_apng_frames</span>
+            <span class="tool-category cat-image">GIF/APNG</span>
           </div>
-          <p class="tool-desc">Deconstructs and exports all 8 bitplanes across R, G, B, and Alpha channels (32 images) as high-contrast planes.</p>
+          <p class="tool-desc">Deconstruct GIF and Animated PNG (APNG) frames, extract per-frame delay millisecond sequences (often used for ASCII flag covert encoding), and compute frame pixel differences.</p>
         </div>
-
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">analyze_jpeg_quantization_tables</span>
+            <span class="tool-category cat-image">JPEG DQT</span>
+          </div>
+          <p class="tool-desc">Extract JPEG Quantization Tables (DQT), Huffman Tables (DHT), and estimate original JPEG compression quality factor and double-compression artifacts.</p>
+        </div>
         <div class="tool-card" data-cat="image">
           <div class="tool-header">
             <span class="tool-name">analyze_png_chunks</span>
             <span class="tool-category cat-image">PNG Chunks</span>
           </div>
-          <p class="tool-desc">Parses ancillary PNG chunks (tEXt, zTXt, iTXt, pHYs, sRGB, private chunks), verifies CRCs, and detects anomalies.</p>
+          <p class="tool-desc">Parse ancillary PNG chunks (tEXt, zTXt, iTXt, pHYs, sRGB, private chunks), verify chunk CRCs, and identify hidden or non-standard chunk anomalies.</p>
         </div>
-
-        <div class="tool-card" data-cat="image">
-          <div class="tool-header">
-            <span class="tool-name">image_math_combine</span>
-            <span class="tool-category cat-image">Visual Crypto</span>
-          </div>
-          <p class="tool-desc">Combines two images with XOR, subtract, add, and difference operations to solve visual cryptography shares.</p>
-        </div>
-
-        <div class="tool-card" data-cat="image">
-          <div class="tool-header">
-            <span class="tool-name">analyze_gif_apng_frames</span>
-            <span class="tool-category cat-image">Animation</span>
-          </div>
-          <p class="tool-desc">Deconstructs GIF and APNG frames, extracts frame duration delays (which encode ASCII flag tokens), and exports frame deltas.</p>
-        </div>
-
-        <div class="tool-card" data-cat="image">
-          <div class="tool-header">
-            <span class="tool-name">run_zsteg_analysis</span>
-            <span class="tool-category cat-image">LSB / MSB</span>
-          </div>
-          <p class="tool-desc">Exhaustive LSB/MSB/channel/permutation analyzer on PNG and BMP formats via zsteg.</p>
-        </div>
-
-        <!-- Frequency & DCT -->
-        <div class="tool-card" data-cat="image">
-          <div class="tool-header">
-            <span class="tool-name">run_stegseek</span>
-            <span class="tool-category cat-image">Cracking</span>
-          </div>
-          <p class="tool-desc">Ultra-fast multithreaded Steghide passphrase cracker using RockYou wordlist dictionaries.</p>
-        </div>
-
-        <div class="tool-card" data-cat="image">
-          <div class="tool-header">
-            <span class="tool-name">run_outguess</span>
-            <span class="tool-category cat-image">DCT Stego</span>
-          </div>
-          <p class="tool-desc">Extracts data hidden in redundant JPEG DCT coefficients using OutGuess algorithm.</p>
-        </div>
-
-        <div class="tool-card" data-cat="image">
-          <div class="tool-header">
-            <span class="tool-name">run_jsteg</span>
-            <span class="tool-category cat-image">Quantization</span>
-          </div>
-          <p class="tool-desc">Recovers secret data embedded in quantized JPEG DCT coefficients via Jsteg.</p>
-        </div>
-
-        <!-- Audio -->
         <div class="tool-card" data-cat="audio">
           <div class="tool-header">
-            <span class="tool-name">generate_audio_spectrogram</span>
-            <span class="tool-category cat-audio">Spectrogram</span>
+            <span class="tool-name">audio_channel_phase_diff</span>
+            <span class="tool-category cat-audio">Phase Diff</span>
           </div>
-          <p class="tool-desc">Renders high-resolution spectrograms (linear/log scale, inferno/magma) to uncover hidden visual drawings and text.</p>
+          <p class="tool-desc">Invert stereo phase and compute channel subtraction (L - R) to isolate center/vocal or hidden audio.</p>
         </div>
-
         <div class="tool-card" data-cat="audio">
           <div class="tool-header">
-            <span class="tool-name">decode_dtmf_tones</span>
-            <span class="tool-category cat-audio">Acoustic</span>
+            <span class="tool-name">audio_lsb_extract</span>
+            <span class="tool-category cat-audio">Audio LSB</span>
           </div>
-          <p class="tool-desc">Decodes telephone dial keypad frequencies using pure Python Goertzel / FFT energy bin detection.</p>
+          <p class="tool-desc">Extract Least Significant Bits (LSB) directly from 16-bit or 8-bit uncompressed WAV PCM samples.</p>
         </div>
-
+        <div class="tool-card" data-cat="ai">
+          <div class="tool-header">
+            <span class="tool-name">auto_decode_payload</span>
+            <span class="tool-category cat-ai">CyberChef</span>
+          </div>
+          <p class="tool-desc">Automated Master Heuristic Pipeline: attempts Base64, Base32, Base85, Base91, Base58, Hex, URL-decoding, ROT13/Caesar shifts, Zlib decompression, and single-byte XOR brute-forcing.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">auto_triage_challenge</span>
+            <span class="tool-category cat-triage">Triage</span>
+          </div>
+          <p class="tool-desc">Autonomous 5-stage Master Pipeline: runs structure audit, flag regex grep, metadata dump, polyglot inspection, and binwalk signature scanning.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">carve_foremost</span>
+            <span class="tool-category cat-triage">Foremost</span>
+          </div>
+          <p class="tool-desc">Raw header/footer file carving using foremost.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">carve_memory_dump_secrets</span>
+            <span class="tool-category cat-triage">RAM Carve</span>
+          </div>
+          <p class="tool-desc">Scan memory core dumps (.dmp, .raw, .core, minidumps) for SSL/TLS master secrets, private RSA keys, environment variables, bash history, and CTF flags.</p>
+        </div>
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">decode_audio_fsk_afsk</span>
+            <span class="tool-category cat-audio">FSK/AFSK</span>
+          </div>
+          <p class="tool-desc">Demodulate Frequency Shift Keying (FSK / AFSK) telemetry audio signals (Bell 103, Bell 202, RTTY).</p>
+        </div>
         <div class="tool-card" data-cat="audio">
           <div class="tool-header">
             <span class="tool-name">decode_audio_morse</span>
-            <span class="tool-category cat-audio">Morse Code</span>
+            <span class="tool-category cat-audio">CW Morse</span>
           </div>
-          <p class="tool-desc">Acoustic CW Morse code decoder converting audio pulse energy envelopes directly into plaintext flags.</p>
+          <p class="tool-desc">Extract and decode acoustic CW Morse code tones from an audio recording directly into plaintext.</p>
         </div>
-
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">decode_baudot_murray_code</span>
+            <span class="tool-category cat-text">Baudot/ITA2</span>
+          </div>
+          <p class="tool-desc">Decode 5-bit ITA2 Baudot/Murray teleprinter punch tape code with LTRS/FIGS shift registers.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">decode_braille_steganography</span>
+            <span class="tool-category cat-text">Braille Stego</span>
+          </div>
+          <p class="tool-desc">Decode Unicode 6-dot and 8-dot Braille patterns (U+2800 to U+28FF) into English alphanumeric text.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">decode_dna_steganography</span>
+            <span class="tool-category cat-text">DNA Stego</span>
+          </div>
+          <p class="tool-desc">Decode DNA nucleotide sequences (A, C, G, T) into binary and ASCII plaintext using standard base pairing (A=00, C=01, G=10, T=11) and Amino Acid Codon translation.</p>
+        </div>
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">decode_dtmf_tones</span>
+            <span class="tool-category cat-audio">DTMF</span>
+          </div>
+          <p class="tool-desc">Decode Dual-Tone Multi-Frequency (DTMF) dial tones in audio to recover keypad numbers.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">decode_morse_in_whitespace</span>
+            <span class="tool-category cat-text">Space Morse</span>
+          </div>
+          <p class="tool-desc">Decode Morse code concealed within whitespace (Spaces=dot, Tabs=dash, Double Spaces=word boundary).</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">decode_spammimic</span>
+            <span class="tool-category cat-text">SpamMimic</span>
+          </div>
+          <p class="tool-desc">Decode SpamMimic spam-text steganography payloads using grammar-state extraction.</p>
+        </div>
         <div class="tool-card" data-cat="audio">
           <div class="tool-header">
             <span class="tool-name">decode_sstv</span>
             <span class="tool-category cat-audio">SSTV</span>
           </div>
-          <p class="tool-desc">Decodes Slow-Scan TV transmissions (Robot36, Martin, Scottie) directly into rendered image frames.</p>
+          <p class="tool-desc">Decode Slow-Scan TV (SSTV) audio transmissions (Robot, Martin, Scottie) directly into rendered image.</p>
         </div>
-
-        <!-- Text, Network, AI -->
         <div class="tool-card" data-cat="text">
           <div class="tool-header">
             <span class="tool-name">decode_zero_width_chars</span>
-            <span class="tool-category cat-text">Unicode</span>
+            <span class="tool-category cat-text">Zero-Width</span>
           </div>
-          <p class="tool-desc">Extracts and parses ZWSP, ZWNJ, ZWJ, BOM, WJ, and variation selectors into binary and ASCII.</p>
+          <p class="tool-desc">Decode zero-width unicode characters (ZWSP, ZWNJ, ZWJ, BOM, WJ, and variation selectors).</p>
         </div>
-
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">descramble_audio_inversion</span>
+            <span class="tool-category cat-audio">Voice Invert</span>
+          </div>
+          <p class="tool-desc">Descramble frequency-inverted voice audio (voice scrambler) by re-modulating against carrier frequency.</p>
+        </div>
+        <div class="tool-card" data-cat="network">
+          <div class="tool-header">
+            <span class="tool-name">detect_covert_http_headers</span>
+            <span class="tool-category cat-network">HTTP Headers</span>
+          </div>
+          <p class="tool-desc">Inspect HTTP streams for covert exfiltration headers (X-Flag, custom authorization headers, Base64 cookies, and chunked transfer encoding trailing padding).</p>
+        </div>
         <div class="tool-card" data-cat="text">
           <div class="tool-header">
-            <span class="tool-name">solve_bacon_cipher</span>
-            <span class="tool-category cat-text">Cipher</span>
+            <span class="tool-name">detect_homoglyphs</span>
+            <span class="tool-category cat-text">Homoglyphs</span>
           </div>
-          <p class="tool-desc">Solves Bacon's cipher across 24-letter and 26-letter alphabets, case variations, and bold/italic markup.</p>
+          <p class="tool-desc">Identify Cyrillic, Greek, or non-Latin lookalike Unicode characters interspersed in standard Latin text.</p>
         </div>
-
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">detect_jpeg_ghosts</span>
+            <span class="tool-category cat-image">JPEG Ghosts</span>
+          </div>
+          <p class="tool-desc">Analyze JPEG Double Compression & Ghosting artifacts across quality factor scans to detect spliced, forged, or hidden payload regions.</p>
+        </div>
+        <div class="tool-card" data-cat="network">
+          <div class="tool-header">
+            <span class="tool-name">detect_network_tunneling</span>
+            <span class="tool-category cat-network">Tunneling</span>
+          </div>
+          <p class="tool-desc">Heuristic detector for DNS tunnels (dnscat2, iodine) and ICMP tunnels (ptunnel).</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">detect_polyglots</span>
+            <span class="tool-category cat-triage">Polyglot</span>
+          </div>
+          <p class="tool-desc">Detect multi-format polyglot files (e.g. ZIP+JPEG, PDF+ZIP, GIF+JavaScript, HTML+PNG, RAR+JPEG).</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">detect_pvd_steganography</span>
+            <span class="tool-category cat-image">PVD Stego</span>
+          </div>
+          <p class="tool-desc">Detect Pixel Value Differencing (PVD) and edge-adaptive steganography in images by analyzing non-uniform histogram anomalies across smooth vs edge pixel neighborhoods.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">detect_repeating_pixel_pattern</span>
+            <span class="tool-category cat-image">Pattern Tile</span>
+          </div>
+          <p class="tool-desc">Detect if an image is constructed from a repeating pixel tile pattern and extract the core tile payload.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">extract_archive_metadata_covert</span>
+            <span class="tool-category cat-triage">Archive Meta</span>
+          </div>
+          <p class="tool-desc">Extract covert steganography hidden in archive header timestamps, UID/GID modulation, and NTFS extra field extended attributes in ZIP and TAR containers.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">extract_bitplanes</span>
+            <span class="tool-category cat-image">Bitplanes</span>
+          </div>
+          <p class="tool-desc">Extract and export all 8 bitplanes for R, G, B, and Alpha channels (32 images).</p>
+        </div>
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">extract_deepsound</span>
+            <span class="tool-category cat-audio">DeepSound</span>
+          </div>
+          <p class="tool-desc">Extract AES-encrypted hidden payloads from WAV/FLAC audio files created by DeepSound.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">extract_lsb_payload</span>
+            <span class="tool-category cat-image">LSB Extract</span>
+          </div>
+          <p class="tool-desc">Extract LSB-embedded binary payload from an image with full control over channel selection, bit order, number of bits, and pixel traversal order. Returns raw bytes as hex and attempts ASCII/flag decoding.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">extract_metadata</span>
+            <span class="tool-category cat-triage">Metadata</span>
+          </div>
+          <p class="tool-desc">Extract deep EXIF/XMP/IPTC metadata, ICC profiles, and comments via ExifTool.</p>
+        </div>
         <div class="tool-card" data-cat="network">
           <div class="tool-header">
             <span class="tool-name">extract_pcap_covert_channels</span>
-            <span class="tool-category cat-network">Network PCAP</span>
+            <span class="tool-category cat-network">PCAP Covert</span>
           </div>
-          <p class="tool-desc">Parses PCAP captures for ICMP payloads, DNS subdomains/TXT exfiltration, and TCP SYN ISN leaks.</p>
+          <p class="tool-desc">Carve ICMP payloads, DNS subdomain exfiltration, TCP SYN ISN leaks, IP ID/TTL modulation, and TLS SNIs.</p>
         </div>
-
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">fft_frequency_analysis</span>
+            <span class="tool-category cat-image">2D FFT</span>
+          </div>
+          <p class="tool-desc">Perform 2D FFT frequency domain analysis on an image to reveal hidden patterns, watermarks, or embedded data in the frequency spectrum.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">full_auto_solve</span>
+            <span class="tool-category cat-triage">Auto-Solve</span>
+          </div>
+          <p class="tool-desc">ULTIMATE AUTOMATED CHALLENGE SOLVER. Runs EVERY applicable StegoKiller engine on the given file in intelligent order, automatically chains results, and extracts flags/payloads without any manual intervention.  Stages:...</p>
+        </div>
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">generate_audio_spectrogram</span>
+            <span class="tool-category cat-audio">Spectrogram</span>
+          </div>
+          <p class="tool-desc">Generate high-resolution log/linear spectrogram from audio to uncover visual steganography, Morse code, or hidden spectral art.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">grep_flag_patterns</span>
+            <span class="tool-category cat-triage">Strings</span>
+          </div>
+          <p class="tool-desc">Search for flag patterns across ASCII, UTF-8, and UTF-16LE/BE strings.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">image_math_combine</span>
+            <span class="tool-category cat-image">Image Math</span>
+          </div>
+          <p class="tool-desc">Combine two images using mathematical operations (XOR, subtract, add, difference, invert) to solve visual cryptography shares and differential steganography challenges.</p>
+        </div>
         <div class="tool-card" data-cat="ai">
           <div class="tool-header">
             <span class="tool-name">inspect_ai_model_stego</span>
-            <span class="tool-category cat-ai">AI Models</span>
+            <span class="tool-category cat-ai">AI Model Stego</span>
           </div>
-          <p class="tool-desc">Forensics on PyTorch (.pt/.pth), SafeTensors, and ONNX models for metadata injection and pickle RCE payloads.</p>
+          <p class="tool-desc">Forensics on PyTorch (.pt/.pth), SafeTensors (.safetensors), and ONNX (.onnx) models to detect trailing payloads, metadata injection, and tensor weight LSB tampering.</p>
         </div>
-
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">inspect_file_structure</span>
+            <span class="tool-category cat-triage">Structure</span>
+          </div>
+          <p class="tool-desc">Check magic bytes against file extension, identify corrupt headers, calculate Shannon entropy across quadrants, and carve trailing overlay bytes.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">inspect_git_stego</span>
+            <span class="tool-category cat-triage">Git Stego</span>
+          </div>
+          <p class="tool-desc">Inspect a .git repository for hidden dangling commits, tree steganography, and orphaned blobs.</p>
+        </div>
         <div class="tool-card" data-cat="text">
           <div class="tool-header">
-            <span class="tool-name">auto_decode_payload</span>
-            <span class="tool-category cat-text">CyberChef</span>
+            <span class="tool-name">inspect_office_xml</span>
+            <span class="tool-category cat-text">Office XML</span>
           </div>
-          <p class="tool-desc">Master heuristic decoder testing Base64/32/85/91/58, Hex, URL, 25 Caesar shifts, Zlib, and Single-byte XOR keys.</p>
+          <p class="tool-desc">Deconstruct DOCX/XLSX/PPTX structures for <w:vanish/>, white fonts, and hidden media.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">inspect_ole_vba_macros</span>
+            <span class="tool-category cat-text">OLE Macros</span>
+          </div>
+          <p class="tool-desc">Forensic analysis of legacy OLE / Compound File Binary (CFB) documents (.doc, .xls, .ppt) for hidden VBA macro streams, AutoOpen triggers, and obfuscated shell commands.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">inspect_pdf_layers_and_js</span>
+            <span class="tool-category cat-text">PDF Layers/JS</span>
+          </div>
+          <p class="tool-desc">Extract PDF Optional Content Groups (invisible layers / /OCG), /Launch actions, and embedded JavaScript streams concealing covert challenge payloads.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">inspect_pdf_stego</span>
+            <span class="tool-category cat-text">PDF Stego</span>
+          </div>
+          <p class="tool-desc">Analyze PDF for hidden incremental update revisions, unreferenced stream objects, and /ActualText.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">multi_tool_lsb_scan</span>
+            <span class="tool-category cat-image">Parallel LSB</span>
+          </div>
+          <p class="tool-desc">Run ALL available LSB extraction tools (zsteg, stegpy, openstego, stegolsb) in parallel and consolidate results with automatic flag detection.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">png_filter_byte_analysis</span>
+            <span class="tool-category cat-image">Filter Bytes</span>
+          </div>
+          <p class="tool-desc">Extract and analyze PNG scanline filter bytes for hidden data encoded in filter type selections (0-4 per row).</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">reconstruct_visual_crypto_2x2</span>
+            <span class="tool-category cat-image">Visual Crypto</span>
+          </div>
+          <p class="tool-desc">Reconstruct classic 2-out-of-2 visual cryptography binary shares (sub-pixel raster overlay).</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">recursive_archive_unpacker</span>
+            <span class="tool-category cat-triage">Archive Recurse</span>
+          </div>
+          <p class="tool-desc">Recursively unpack nested archives (ZIP, 7z, TAR, GZ, BZ2, XZ, RAR) up to max_depth to solve 'Matryoshka doll' nested compression CTF challenges.</p>
+        </div>
+        <div class="tool-card" data-cat="ai">
+          <div class="tool-header">
+            <span class="tool-name">repair_and_read_qr</span>
+            <span class="tool-category cat-ai">QR Repair</span>
+          </div>
+          <p class="tool-desc">Read, unmask, and repair corrupted QR codes (inverted polarity, damaged finder patterns).</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_cloaked_pixel</span>
+            <span class="tool-category cat-image">CloakedPixel</span>
+          </div>
+          <p class="tool-desc">Extract LSB steganography payload scattered using PRNG seed matrices via cloakedpixel.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_f5_stego</span>
+            <span class="tool-category cat-image">F5 Stego</span>
+          </div>
+          <p class="tool-desc">Extract hidden data from JPEG files using the F5 matrix steganography algorithm.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_jsteg</span>
+            <span class="tool-category cat-image">Jsteg</span>
+          </div>
+          <p class="tool-desc">Extract hidden data from quantized JPEG DCT coefficients using Jsteg.</p>
+        </div>
+        <div class="tool-card" data-cat="audio">
+          <div class="tool-header">
+            <span class="tool-name">run_mp3stego</span>
+            <span class="tool-category cat-audio">MP3Stego</span>
+          </div>
+          <p class="tool-desc">Extract hidden payloads from MP3 layer-3 bit allocation tables using MP3Stego (Decode).</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_outguess</span>
+            <span class="tool-category cat-image">OutGuess</span>
+          </div>
+          <p class="tool-desc">Extract data hidden in redundant JPEG DCT bits using OutGuess.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_steghide</span>
+            <span class="tool-category cat-image">Steghide</span>
+          </div>
+          <p class="tool-desc">Extract hidden steganography payload from JPEG, BMP, or WAV files using Steghide.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_stegpy</span>
+            <span class="tool-category cat-image">stegpy</span>
+          </div>
+          <p class="tool-desc">Extract steganography payloads created via stegpy (PNG, BMP, WebP).</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_stegseek</span>
+            <span class="tool-category cat-image">StegSeek</span>
+          </div>
+          <p class="tool-desc">Ultra-fast multithreaded cracker for steghide passphrases on JPEG/BMP/WAV.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">run_stegsnow</span>
+            <span class="tool-category cat-text">SNOW Whitespace</span>
+          </div>
+          <p class="tool-desc">Extract trailing whitespace and tab steganography using SNOW.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">run_zsteg_analysis</span>
+            <span class="tool-category cat-image">zsteg</span>
+          </div>
+          <p class="tool-desc">Analyze PNG/BMP images with zsteg across all channels, bit orders, and pixel permutations.</p>
+        </div>
+        <div class="tool-card" data-cat="triage">
+          <div class="tool-header">
+            <span class="tool-name">scan_and_carve_binwalk</span>
+            <span class="tool-category cat-triage">Binwalk</span>
+          </div>
+          <p class="tool-desc">Execute binwalk signature scan and optionally auto-carve embedded archives.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">solve_bacon_cipher</span>
+            <span class="tool-category cat-text">Bacon Cipher</span>
+          </div>
+          <p class="tool-desc">Solve Bacon's cipher (supporting both 24-letter I=J/U=V and 26-letter complete alphabets). Handles A/B representations, case variations (Lower=A, Upper=B), and bold/italic markup.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">solve_png_ihdr</span>
+            <span class="tool-category cat-image">PNG Repair</span>
+          </div>
+          <p class="tool-desc">Brute-force correct PNG dimensions (Height and Width) against IHDR CRC32 checksum to restore artificially cropped or truncated challenge images.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">statistical_steganalysis</span>
+            <span class="tool-category cat-image">Steganalysis</span>
+          </div>
+          <p class="tool-desc">Perform Chi-Square (χ²) Analysis, Sample Pairs Analysis (SPA), and RS Steganalysis to detect LSB steganography and estimate embedded payload percentage.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">steghide_dictionary_attack</span>
+            <span class="tool-category cat-image">Dict Attack</span>
+          </div>
+          <p class="tool-desc">Run a dictionary attack against steghide-embedded data using common CTF passwords or a custom wordlist.</p>
+        </div>
+        <div class="tool-card" data-cat="image">
+          <div class="tool-header">
+            <span class="tool-name">stegseek_rockyou_crack</span>
+            <span class="tool-category cat-image">StegSeek</span>
+          </div>
+          <p class="tool-desc">Ultra-fast steghide passphrase cracker using stegseek with rockyou.txt or custom wordlist. Can test millions of passwords per second.</p>
+        </div>
+        <div class="tool-card" data-cat="text">
+          <div class="tool-header">
+            <span class="tool-name">xor_bruteforce</span>
+            <span class="tool-category cat-text">XOR Brute</span>
+          </div>
+          <p class="tool-desc">Brute-force single-byte and multi-byte XOR keys on a file (up to max_key_len bytes). Automatically detects flags and printable text.</p>
         </div>
       </div>
     </section>
@@ -631,27 +996,26 @@ python3 server.py</pre>
 
   <footer>
     <div class="container">
-      <p>StegoKiller Ultra MCP Suite v3.0 • Developed by <strong>Knight_S</strong> • Open Source under Apache-2.0</p>
-      <p style="margin-top: 8px;">Maintained on <a href="https://github.com/shaymimran26-netizen/StegoKiller" target="_blank">GitHub</a></p>
+      <p>StegoKiller MCP Server v4.0.0 • Developed by <a href="https://github.com/shaymimran26-netizen" target="_blank">Knight_S</a> • Licensed under Apache 2.0</p>
     </div>
   </footer>
 
   <script>
     function openTab(evt, tabName) {
-      var tabContents = document.getElementsByClassName("tab-content");
-      for (var i = 0; i < tabContents.length; i++) {
-        tabContents[i].classList.remove("active");
+      var contents = document.getElementsByClassName("tab-content");
+      for (var i = 0; i < contents.length; i++) {
+        contents[i].classList.remove("active");
       }
-      var tabBtns = document.getElementsByClassName("tab-btn");
-      for (var i = 0; i < tabBtns.length; i++) {
-        tabBtns[i].classList.remove("active");
+      var buttons = document.getElementsByClassName("tab-btn");
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove("active");
       }
       document.getElementById(tabName).classList.add("active");
       evt.currentTarget.classList.add("active");
     }
 
-    function copyCode(elementId) {
-      var text = document.getElementById(elementId).innerText;
+    function copyCode(id) {
+      var text = document.getElementById(id).innerText;
       navigator.clipboard.writeText(text).then(function() {
         alert("Copied to clipboard!");
       });
@@ -661,11 +1025,24 @@ python3 server.py</pre>
       var input = document.getElementById("toolSearch").value.toLowerCase();
       var cards = document.getElementsByClassName("tool-card");
       for (var i = 0; i < cards.length; i++) {
-        var cardText = cards[i].innerText.toLowerCase();
-        if (cardText.includes(input)) {
+        var text = cards[i].innerText.toLowerCase();
+        cards[i].style.display = text.includes(input) ? "block" : "none";
+      }
+    }
+
+    function filterCategory(cat, evt) {
+      var buttons = document.getElementsByClassName("filter-btn");
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove("active");
+      }
+      if (evt) evt.currentTarget.classList.add("active");
+
+      var cards = document.getElementsByClassName("tool-card");
+      for (var i = 0; i < cards.length; i++) {
+        if (cat === "all") {
           cards[i].style.display = "block";
         } else {
-          cards[i].style.display = "none";
+          cards[i].style.display = (cards[i].getAttribute("data-cat") === cat) ? "block" : "none";
         }
       }
     }

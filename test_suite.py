@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ================================================================================
- StegoKiller Master Verification & Automated Test Suite (v3.5 - 60 Tools)
+ StegoKiller Master Verification & Automated Test Suite (v4.0.0 - 70 Tools)
  Author: Knight_S
 ================================================================================
 """
@@ -46,6 +46,14 @@ from server import (
     decode_morse_in_whitespace,
     carve_memory_dump_secrets,
     detect_covert_http_headers,
+    xor_bruteforce,
+    detect_repeating_pixel_pattern,
+    fft_frequency_analysis,
+    extract_lsb_payload,
+    png_filter_byte_analysis,
+    steghide_dictionary_attack,
+    analyze_alpha_channel,
+    full_auto_solve,
     mcp
 )
 
@@ -67,7 +75,7 @@ def record(name, status, details=""):
     TESTS.append({"test": name, "passed": status, "details": details})
 
 print("\n" + "="*80)
-print("       STEGOKILLER MCP SERVER — MASTER 60-TOOL AUTOMATED TEST HARNESS")
+print("       STEGOKILLER MCP SERVER — MASTER 70-TOOL AUTOMATED TEST HARNESS")
 print("="*80 + "\n")
 
 # Setup synthetic files
@@ -120,11 +128,31 @@ frames = [Image.fromarray(np.full((30, 30, 3), c * 50, dtype=np.uint8)) for c in
 gif_file = TEST_DIR / "challenge_delays.gif"
 frames[0].save(gif_file, save_all=True, append_images=frames[1:], duration=[70, 70, 70, 70], loop=0)
 
+# 5. XOR Brute-Force test file
+xor_plain = b"This is a secret message containing flag{xor_automation_success_2026}!"
+xor_key = 0x5A
+xor_cipher = bytes([b ^ xor_key for b in xor_plain])
+xor_file = TEST_DIR / "xor_test.bin"
+xor_file.write_bytes(xor_cipher)
+
+# 6. Repeating pattern image
+tile = np.array([[128, 64, 32, 255], [200, 100, 50, 255]], dtype=np.uint8)
+tiled_arr = np.tile(tile, (40, 20, 1))
+tiled_img_file = TEST_DIR / "repeating_tile.png"
+Image.fromarray(tiled_arr).save(tiled_img_file)
+
+# 7. Alpha channel test image
+alpha_arr = np.full((50, 50, 4), 200, dtype=np.uint8)
+alpha_arr[:, :, 3] = 250
+alpha_arr[:10, :10, 3] = 251
+alpha_img_file = TEST_DIR / "alpha_test.png"
+Image.fromarray(alpha_arr).save(alpha_img_file)
+
 # --- EXECUTE TEST CASES ---
 
 # Test 1: Registered Tools Count
 total_tools = len(mcp._tool_manager.list_tools())
-record("Registered Tools Count >= 60", total_tools >= 60, f"Found {total_tools} tools")
+record("Registered Tools Count >= 70", total_tools >= 70, f"Found {total_tools} tools")
 
 # Test 2: PNG IHDR CRC32 Recovery
 ihdr_res = solve_png_ihdr(str(corrupt_png))
@@ -194,19 +222,16 @@ ghost_res = detect_jpeg_ghosts(str(jpg_test))
 record("detect_jpeg_ghosts", "JPEG GHOST" in ghost_res, ghost_res[:100])
 
 # Test 17: DNA Nucleotide & Genetic Stego Decoder
-# 'FLAG' in DNA 2-bit: F=01000110(C A C G), L=01001100(C A T C), A=01000001(C A A C), G=01000111(C A C T)
 dna_seq = "CACGCATACAACCACT"
 dna_res = decode_dna_steganography(dna_seq)
 record("decode_dna_steganography", "FLAG" in dna_res, dna_res)
 
 # Test 18: Baudot / Murray ITA2 Teleprinter Decoder
-# 'E' (00001) 'A' (00011) 'T' (10000)
 baudot_bits = "000010001110000"
 baudot_res = decode_baudot_murray_code(baudot_bits)
 record("decode_baudot_murray_code", "EAT" in baudot_res, baudot_res)
 
 # Test 19: Unicode Braille Steganography Decoder
-# 'ctf' in braille: ⠉ ⠞ ⠋
 braille_str = "⠉⠞⠋"
 braille_res = decode_braille_steganography(braille_str)
 record("decode_braille_steganography", "ctf" in braille_res, braille_res)
@@ -223,12 +248,44 @@ http_log.write_bytes(b"GET /index.html HTTP/1.1\r\nHost: ctf.local\r\nX-Flag-Sec
 http_res = detect_covert_http_headers(str(http_log))
 record("detect_covert_http_headers", "flag{http_covert_header}" in http_res, http_res)
 
+# Test 22: XOR Brute Force Engine
+xor_b_res = xor_bruteforce(str(xor_file))
+record("xor_bruteforce (255-key sweep)", "flag{xor_automation_success_2026}" in xor_b_res, xor_b_res)
+
+# Test 23: Repeating Pixel Pattern Detector
+pattern_res = detect_repeating_pixel_pattern(str(tiled_img_file))
+record("detect_repeating_pixel_pattern", "REPEATING TILE DETECTED" in pattern_res, pattern_res)
+
+# Test 24: 2D FFT Frequency Analysis
+fft_res = fft_frequency_analysis(str(tiled_img_file))
+record("fft_frequency_analysis", "2D FFT FREQUENCY ANALYSIS" in fft_res, fft_res)
+
+# Test 25: Direct LSB Payload Extraction
+lsb_ext_res = extract_lsb_payload(str(tiled_img_file), channels="rgb", bits=1)
+record("extract_lsb_payload", "LSB PAYLOAD EXTRACTION" in lsb_ext_res, lsb_ext_res)
+
+# Test 26: PNG Scanline Filter Byte Analysis
+filter_res = png_filter_byte_analysis(str(tmp_png))
+record("png_filter_byte_analysis", "PNG FILTER BYTE ANALYSIS" in filter_res, filter_res)
+
+# Test 27: Steghide Dictionary Attack
+dict_res = steghide_dictionary_attack(str(tmp_png))
+record("steghide_dictionary_attack", "STEGHIDE DICTIONARY ATTACK" in dict_res, dict_res)
+
+# Test 28: Deep Alpha Channel Forensics
+alpha_res = analyze_alpha_channel(str(alpha_img_file))
+record("analyze_alpha_channel", "ALPHA CHANNEL ANALYSIS" in alpha_res, alpha_res)
+
+# Test 29: Full Autonomous Challenge Solver
+auto_res = full_auto_solve(str(corrupt_png))
+record("full_auto_solve Master Pipeline", "FULL AUTO-SOLVE REPORT" in auto_res, auto_res[:100])
+
 print("\n" + "="*80)
 print(f"       SUMMARY: {PASSED}/{PASSED+FAILED} TESTS PASSED ({PASSED/(PASSED+FAILED)*100:.1f}%)")
 print("="*80 + "\n")
 
 if FAILED == 0:
-    print(">>> ALL 21 MASTER INTEGRATION TESTS PASSED WITH 100% SUCCESS! <<<")
+    print(">>> ALL 29 MASTER INTEGRATION TESTS PASSED WITH 100% SUCCESS! <<<")
 else:
     print(f">>> {FAILED} TESTS FAILED. PLEASE REVIEW.")
     sys.exit(1)

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# StegoKiller Ultra Suite v3.0 - Automated Toolchain Installer
+# StegoKiller Ultra Suite v4.0.0 - Automated Toolchain Installer
 # Author: Knight_S
 # ==============================================================================
 
 set -e
 
-echo "[*] Initializing StegoKiller Ultra Toolchain Setup (44+ Tools)..."
+echo "[*] Initializing StegoKiller Ultra Toolchain Setup (70 Specialized Tools)..."
 
 if [ -f /etc/os-release ]; then
     . /etc/os-release
